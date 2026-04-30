@@ -7,36 +7,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        
-        // Your Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDiqDfyEigWCnH3kbQ3qoHMEO6mUn1Ba74",
-            authDomain: "email-3e3f1.firebaseapp.com",
-            projectId: "email-3e3f1",
-            storageBucket: "email-3e3f1.firebasestorage.app",
-            messagingSenderId: "810220443461",
-            appId: "1:810220443461:web:e773a75b9744cbbfb6102c",
-            measurementId: "G-CXXQCLRVGS"
-        };
-        
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        
-        // Make auth available globally
-        window.auth = auth;
-        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-        window.sendPasswordResetEmail = sendPasswordResetEmail;
-        window.signOut = signOut;
-        window.onAuthStateChanged = onAuthStateChanged;
-        
-        console.log("Firebase initialized successfully!");
-    </script>
+    <!-- EmailJS Library -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     
     <!-- Three.js for 3D Background -->
     <script type="importmap">
@@ -116,6 +88,8 @@
         .login-card button:hover { transform: translateY(-2px); }
         .login-card .secondary-btn { background: transparent; border: 1px solid #3b82f6; }
         .login-message { margin-top: 1rem; font-size: 0.85rem; color: #86efac; }
+        .otp-group { display: none; margin-top: 0.5rem; }
+        .otp-group.show { display: block; }
         
         .navbar {
             display: flex;
@@ -144,7 +118,7 @@
             padding: 0.4rem 1rem;
             border-radius: 2rem;
         }
-        .user-info button { background: none; border: none; color: #3b82f6; cursor: pointer; }
+        .user-info button { background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 1rem; }
         
         .hero { max-width: 1300px; margin: 2rem auto; padding: 2rem; display: flex; flex-wrap: wrap; align-items: center; gap: 3rem; z-index: 5; position: relative; }
         .hero-left { flex: 1.2; }
@@ -172,6 +146,7 @@
         .accordion-content { display: none; margin-top: 1rem; margin-bottom: 2rem; }
         .accordion-content.active { display: block; }
         .info-box { background: rgba(10,20,35,0.6); border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1.5rem; border-left: 4px solid #3b82f6; }
+        .info-box h3 { margin-bottom: 0.8rem; color: #60a5fa; }
         .component-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 0.8rem; margin: 1rem 0; }
         .component-item { background: #0f172a; padding: 0.7rem 1rem; border-radius: 1rem; border-left: 3px solid #3b82f6; }
         pre { background: #0f172a; padding: 1rem; border-radius: 1rem; overflow-x: auto; font-family: monospace; font-size: 0.85rem; margin: 1rem 0; position: relative; }
@@ -204,17 +179,26 @@
 </head>
 <body>
 
-<!-- Login Overlay -->
+<!-- Login/OTP Modal -->
 <div id="loginOverlay" class="login-overlay">
     <div class="login-card">
         <i class="fas fa-shield-alt" style="font-size: 3rem; color: #3b82f6; margin-bottom: 1rem;"></i>
         <h2 style="margin-bottom: 0.5rem;">VisionGuard</h2>
-        <p style="margin-bottom: 1.5rem; color: #94a3b8;">Sign in to access full features</p>
-        <input type="email" id="loginEmail" placeholder="Email address">
-        <input type="password" id="loginPassword" placeholder="Password">
-        <button id="loginBtn"><i class="fas fa-sign-in-alt"></i> Login</button>
-        <button id="registerBtn" class="secondary-btn"><i class="fas fa-user-plus"></i> Create Account</button>
-        <button id="forgotBtn" class="secondary-btn" style="background: transparent; border: none; font-size: 0.8rem;"><i class="fas fa-key"></i> Forgot Password?</button>
+        <p style="margin-bottom: 1.5rem; color: #94a3b8;">Sign in with OTP sent to your email</p>
+        
+        <!-- Step 1: Email Input -->
+        <div id="stepEmail">
+            <input type="email" id="loginEmail" placeholder="Enter your email address">
+            <button id="sendOtpBtn"><i class="fas fa-paper-plane"></i> Send OTP</button>
+        </div>
+        
+        <!-- Step 2: OTP Input -->
+        <div id="stepOtp" class="otp-group">
+            <input type="text" id="otpCode" placeholder="Enter 6-digit OTP">
+            <button id="verifyOtpBtn"><i class="fas fa-check-circle"></i> Verify & Login</button>
+            <button id="resendOtpBtn" class="secondary-btn"><i class="fas fa-redo"></i> Resend OTP</button>
+        </div>
+        
         <div id="loginMessage" class="login-message"></div>
     </div>
 </div>
@@ -230,11 +214,11 @@
             <p>SMART TV PROTECTION</p>
         </div>
     </div>
-    <div style="display: flex; gap: 1rem; align-items: center;">
+    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
         <div id="userInfo" class="user-info" style="display: none;">
             <i class="fas fa-user-circle"></i>
             <span id="userEmail"></span>
-            <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
+            <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
         <select id="languageSwitcher" style="background: rgba(0,0,0,0.5); padding: 0.4rem 0.8rem; border-radius: 40px; border: 1px solid #3b82f6; color: white;">
             <option value="si">🇱🇰 සිංහල</option>
@@ -260,15 +244,15 @@
 
 <!-- IR System Section -->
 <div class="section-container">
-    <h2 class="section-title">Universal IR Remote System</h2>
+    <h2 class="section-title"><i class="fas fa-infrared"></i> Universal IR Remote System</h2>
     <div class="cards-grid">
         <div class="topic-card" onclick="toggleAccordion('ir-overview')"><i class="fas fa-globe"></i><h3>1. System Overview</h3></div>
         <div class="topic-card" onclick="toggleAccordion('ir-components')"><i class="fas fa-microchip"></i><h3>2. Components</h3></div>
         <div class="topic-card" onclick="toggleAccordion('ir-capture')"><i class="fas fa-code"></i><h3>3. Capture Codes</h3></div>
         <div class="topic-card" onclick="toggleAccordion('ir-send')"><i class="fas fa-paper-plane"></i><h3>4. Send Signals</h3></div>
     </div>
-    <div id="ir-overview" class="accordion-content"><div class="info-box"><h3>🔰 IR System Overview</h3><p>IR (Infrared) system is used to control TV, AC, Fan, Set-top box devices. When added to VisionGuard: 📱 App can simulate IR remote. 📡 Arduino sends IR signals to control devices. 👉 Basically: Phone = Universal Remote</p></div></div>
-    <div id="ir-components" class="accordion-content"><div class="info-box"><h3>🧩 Required Components</h3><div class="component-list"><div class="component-item">🔴 IR LED Transmitter Module</div><div class="component-item">📡 IR Receiver Module VS1838B</div><div class="component-item">🎮 ESP32 Dev Board / Arduino</div><div class="component-item">🔧 Resistor + Breadboard + Wires</div></div></div></div>
+    <div id="ir-overview" class="accordion-content"><div class="info-box"><h3>🔰 IR System Overview</h3><p>IR (Infrared) system is used to control TV, AC, Fan, Set-top box devices. Phone = Universal Remote</p></div></div>
+    <div id="ir-components" class="accordion-content"><div class="info-box"><h3>🧩 Required Components</h3><div class="component-list"><div class="component-item">🔴 IR LED Transmitter Module</div><div class="component-item">📡 IR Receiver VS1838B</div><div class="component-item">🎮 ESP32 Dev Board</div><div class="component-item">🔧 Resistor + Jumper Wires</div></div></div></div>
     <div id="ir-capture" class="accordion-content"><div class="info-box"><h3>🔍 Step 1 – Capture IR Codes</h3><pre><code id="code1">#include &lt;IRremote.h&gt;
 int recvPin = 15;
 IRrecv irrecv(recvPin);
@@ -282,15 +266,15 @@ void loop() { irsend.sendNEC(0xFFA25D, 32); delay(5000); }</code><button class="
 
 <!-- Arduino System Section -->
 <div class="section-container">
-    <h2 class="section-title">Eye Safety Sensor System</h2>
+    <h2 class="section-title"><i class="fas fa-microchip"></i> Eye Safety Sensor System</h2>
     <div class="cards-grid">
         <div class="topic-card" onclick="toggleAccordion('ard-overview')"><i class="fas fa-robot"></i><h3>1. System Overview</h3></div>
         <div class="topic-card" onclick="toggleAccordion('ard-components')"><i class="fas fa-microchip"></i><h3>2. Components</h3></div>
         <div class="topic-card" onclick="toggleAccordion('ard-code')"><i class="fas fa-code"></i><h3>3. Code Example</h3></div>
     </div>
-    <div id="ard-overview" class="accordion-content"><div class="info-box"><h3>🔰 Arduino System Overview</h3><p>VisionGuard Arduino part: 👉 Real-world devices control + sensor data collection. Android app sends commands → Arduino executes. Sensors → Arduino → App (real-time monitoring). Two-way system.</p></div></div>
+    <div id="ard-overview" class="accordion-content"><div class="info-box"><h3>🔰 Arduino System Overview</h3><p>Real-world devices control + sensor data collection. App → Arduino → Devices (Two-way system)</p></div></div>
     <div id="ard-components" class="accordion-content"><div class="info-box"><h3>🧠 Main Components</h3><div class="component-list"><div class="component-item">🔷 ESP32 Dev Board (Best)</div><div class="component-item">📡 WiFi/Bluetooth/GSM</div><div class="component-item">🔌 Relays for Lights/Fans</div><div class="component-item">📊 DHT11, PIR, MQ Sensors</div></div></div></div>
-    <div id="ard-code" class="accordion-content"><div class="info-box"><h3>💻 Arduino Code</h3><pre><code id="code3">if(command == "LIGHT_ON"){ digitalWrite(relayPin, HIGH); }
+    <div id="ard-code" class="accordion-content"><div class="info-box"><h3>💻 Arduino Code Example</h3><pre><code id="code3">if(command == "LIGHT_ON"){ digitalWrite(relayPin, HIGH); }
 int motion = digitalRead(pirPin);
 if(motion == HIGH){ sendAlert(); }</code><button class="copy-btn" onclick="copyCode('code3')">Copy</button></pre></div></div>
 </div>
@@ -309,38 +293,206 @@ if(motion == HIGH){ sendAlert(); }</code><button class="copy-btn" onclick="copyC
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
     
+    // Particle system
     const particlesGeo = new THREE.BufferGeometry();
     const posArray = new Float32Array(1500 * 3);
-    for(let i=0; i<1500; i++) { posArray[i*3]=(Math.random()-0.5)*100; posArray[i*3+1]=(Math.random()-0.5)*60; posArray[i*3+2]=(Math.random()-0.5)*50-30; }
+    for(let i=0; i<1500; i++) { 
+        posArray[i*3]=(Math.random()-0.5)*100; 
+        posArray[i*3+1]=(Math.random()-0.5)*60; 
+        posArray[i*3+2]=(Math.random()-0.5)*50-30; 
+    }
     particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-    const particles = new THREE.Points(particlesGeo, new THREE.PointsMaterial({ color: 0x3b82f6, size: 0.1, transparent: true }));
+    const particlesMat = new THREE.PointsMaterial({ color: 0x3b82f6, size: 0.1, transparent: true, opacity: 0.7 });
+    const particles = new THREE.Points(particlesGeo, particlesMat);
     scene.add(particles);
     
+    // Rotating ring
     const ringGeo = new THREE.TorusGeometry(2.5, 0.05, 64, 200);
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x1e3a8a, emissiveIntensity: 0.8 }));
+    const ringMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x1e3a8a, emissiveIntensity: 0.8 });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
     scene.add(ring);
     
-    scene.add(new THREE.AmbientLight(0x111122));
-    const light = new THREE.PointLight(0x3b82f6, 1);
-    light.position.set(2,3,4);
-    scene.add(light);
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0x111122);
+    scene.add(ambientLight);
+    const pointLight = new THREE.PointLight(0x3b82f6, 1);
+    pointLight.position.set(2, 3, 4);
+    scene.add(pointLight);
     
     camera.position.z = 12;
+    camera.position.y = 1;
+    
     let time = 0;
     function animate() {
         requestAnimationFrame(animate);
         time += 0.008;
         particles.rotation.y = time * 0.05;
+        particles.rotation.x = Math.sin(time * 0.15) * 0.1;
         ring.rotation.x = Math.sin(time * 0.5) * 0.2;
         ring.rotation.y = time * 0.2;
+        ring.rotation.z = Math.cos(time * 0.3) * 0.1;
         renderer.render(scene, camera);
     }
     animate();
-    window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+    
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 </script>
 
 <script>
+    // ========== EMAILJS CONFIGURATION ==========
+    // Your EmailJS Keys
+    const EMAILJS_PUBLIC_KEY = "HU_c1Wj3Ja7RcvGPY";
+    const EMAILJS_SERVICE_ID = "service_x86w7am";
+    const EMAILJS_TEMPLATE_ID = "template_9c4yvqi";
+    
+    // Initialize EmailJS
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+    
+    // OTP Storage
+    let generatedOtp = null;
+    let otpEmail = null;
+    let otpExpiry = null;
+    
+    // DOM Elements
+    const loginOverlay = document.getElementById('loginOverlay');
+    const userInfoDiv = document.getElementById('userInfo');
+    const userEmailSpan = document.getElementById('userEmail');
+    const loginMessage = document.getElementById('loginMessage');
+    const stepEmailDiv = document.getElementById('stepEmail');
+    const stepOtpDiv = document.getElementById('stepOtp');
+    
+    // Check if user is already logged in
+    let loggedInUser = localStorage.getItem('visionguard_user');
+    if(loggedInUser) {
+        loginOverlay.style.display = 'none';
+        userInfoDiv.style.display = 'flex';
+        userEmailSpan.innerText = loggedInUser;
+    }
+    
+    // Generate 6-digit OTP
+    function generateOTP() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    
+    // Send OTP via EmailJS
+    async function sendOTPEmail(email, otp) {
+        try {
+            const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+                to_email: email,
+                otp: otp,
+                email: email
+            });
+            console.log("Email sent:", response);
+            return true;
+        } catch(error) {
+            console.error("Email failed:", error);
+            loginMessage.innerHTML = '❌ Failed to send OTP. Error: ' + error.text;
+            return false;
+        }
+    }
+    
+    // Send OTP Button
+    document.getElementById('sendOtpBtn').onclick = async () => {
+        const email = document.getElementById('loginEmail').value;
+        if(!email || !email.includes('@')) {
+            loginMessage.innerText = 'Please enter a valid email address';
+            return;
+        }
+        
+        loginMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending OTP...';
+        
+        // Generate OTP
+        const otp = generateOTP();
+        generatedOtp = otp;
+        otpEmail = email;
+        otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes expiry
+        
+        // Send email
+        const sent = await sendOTPEmail(email, otp);
+        
+        if(sent) {
+            loginMessage.innerHTML = '✅ OTP sent to ' + email + '! Check your inbox.';
+            stepEmailDiv.style.display = 'none';
+            stepOtpDiv.classList.add('show');
+        } else {
+            loginMessage.innerHTML = '❌ Failed to send OTP. Please check EmailJS configuration.';
+        }
+    };
+    
+    // Verify OTP Button
+    document.getElementById('verifyOtpBtn').onclick = () => {
+        const enteredOtp = document.getElementById('otpCode').value;
+        
+        if(!generatedOtp) {
+            loginMessage.innerText = 'Please request OTP first';
+            return;
+        }
+        
+        if(Date.now() > otpExpiry) {
+            loginMessage.innerText = 'OTP has expired. Please request a new one.';
+            return;
+        }
+        
+        if(enteredOtp === generatedOtp) {
+            // Login successful
+            localStorage.setItem('visionguard_user', otpEmail);
+            loginOverlay.style.display = 'none';
+            userInfoDiv.style.display = 'flex';
+            userEmailSpan.innerText = otpEmail;
+            loginMessage.innerText = '';
+            // Reset form
+            stepEmailDiv.style.display = 'block';
+            stepOtpDiv.classList.remove('show');
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('otpCode').value = '';
+            generatedOtp = null;
+        } else {
+            loginMessage.innerText = 'Invalid OTP. Please try again.';
+        }
+    };
+    
+    // Resend OTP
+    document.getElementById('resendOtpBtn').onclick = async () => {
+        if(!otpEmail) {
+            loginMessage.innerText = 'Email not found. Please go back and enter email.';
+            stepEmailDiv.style.display = 'block';
+            stepOtpDiv.classList.remove('show');
+            return;
+        }
+        
+        const newOtp = generateOTP();
+        generatedOtp = newOtp;
+        otpExpiry = Date.now() + 5 * 60 * 1000;
+        
+        loginMessage.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resending OTP...';
+        const sent = await sendOTPEmail(otpEmail, newOtp);
+        
+        if(sent) {
+            loginMessage.innerHTML = '✅ New OTP sent to ' + otpEmail + '!';
+        } else {
+            loginMessage.innerHTML = '❌ Failed to send OTP. Please try again.';
+        }
+    };
+    
+    // Logout
+    document.getElementById('logoutBtn').onclick = () => {
+        localStorage.removeItem('visionguard_user');
+        loginOverlay.style.display = 'flex';
+        userInfoDiv.style.display = 'none';
+        stepEmailDiv.style.display = 'block';
+        stepOtpDiv.classList.remove('show');
+        document.getElementById('loginEmail').value = '';
+        document.getElementById('otpCode').value = '';
+        generatedOtp = null;
+        loginMessage.innerText = '';
+    };
+    
     // Utility Functions
     function toggleAccordion(id) {
         const el = document.getElementById(id);
@@ -354,7 +506,7 @@ if(motion == HIGH){ sendAlert(); }</code><button class="copy-btn" onclick="copyC
         alert('Code copied to clipboard!');
     }
     
-    // Back to Top
+    // Back to Top Button
     const backBtn = document.getElementById('backToTop');
     window.addEventListener('scroll', () => backBtn.classList.toggle('show', window.scrollY > 300));
     backBtn.onclick = () => window.scrollTo({top: 0, behavior: 'smooth'});
@@ -363,279 +515,13 @@ if(motion == HIGH){ sendAlert(); }</code><button class="copy-btn" onclick="copyC
     const themeBtn = document.getElementById('themeToggle');
     themeBtn.onclick = () => document.body.classList.toggle('light-mode');
     
-    // Language Switcher (Basic)
+    // Language Switcher (placeholder)
     const langSelect = document.getElementById('languageSwitcher');
-    langSelect.onchange = (e) => { console.log('Language changed to:', e.target.value); };
-    
-    // ========== FIREBASE AUTHENTICATION ==========
-    const loginOverlay = document.getElementById('loginOverlay');
-    const userInfoDiv = document.getElementById('userInfo');
-    const userEmailSpan = document.getElementById('userEmail');
-    const loginMessage = document.getElementById('loginMessage');
-    
-    // Wait for Firebase to be ready
-    setTimeout(() => {
-        if(window.auth && window.onAuthStateChanged) {
-            window.onAuthStateChanged(window.auth, (user) => {
-                if(user) {
-                    // User is logged in
-                    loginOverlay.style.display = 'none';
-                    userInfoDiv.style.display = 'flex';
-                    userEmailSpan.innerText = user.email;
-                    console.log('User logged in:', user.email);
-                } else {
-                    // User is logged out
-                    loginOverlay.style.display = 'flex';
-                    userInfoDiv.style.display = 'none';
-                }
-            });
-        } else {
-            console.log('Firebase not loaded yet, retrying...');
-            setTimeout(arguments.callee, 500);
-        }
-    }, 500);
-    
-    // Login Button
-    document.getElementById('loginBtn').onclick = async () => {
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        if(!email || !password) {
-            loginMessage.innerText = 'Please enter email and password';
-            return;
-        }
-        loginMessage.innerText = 'Logging in...';
-        try {
-            await window.signInWithEmailAndPassword(window.auth, email, password);
-            loginMessage.innerText = 'Login successful!';
-        } catch(error) {
-            loginMessage.innerText = error.message;
-        }
-    };
-    
-    // Register Button
-    document.getElementById('registerBtn').onclick = async () => {
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        if(!email || !password) {
-            loginMessage.innerText = 'Please enter email and password';
-            return;
-        }
-        if(password.length < 6) {
-            loginMessage.innerText = 'Password must be at least 6 characters';
-            return;
-        }
-        loginMessage.innerText = 'Creating account...';
-        try {
-            await window.createUserWithEmailAndPassword(window.auth, email, password);
-            loginMessage.innerText = 'Account created! You are now logged in.';
-        } catch(error) {
-            loginMessage.innerText = error.message;
-        }
-    };
-    
-    // Forgot Password
-    document.getElementById('forgotBtn').onclick = async () => {
-        const email = document.getElementById('loginEmail').value;
-        if(!email) {
-            loginMessage.innerText = 'Please enter your email address first';
-            return;
-        }
-        loginMessage.innerText = 'Sending reset email...';
-        try {
-            await window.sendPasswordResetEmail(window.auth, email);
-            loginMessage.innerText = 'Password reset email sent! Check your inbox.';
-        } catch(error) {
-            loginMessage.innerText = error.message;
-        }
-    };
-    
-    // Logout Button
-    document.getElementById('logoutBtn').onclick = async () => {
-        await window.signOut(window.auth);
-        console.log('User logged out');
-    };
+    langSelect.onchange = (e) => console.log('Language changed to:', e.target.value);
     
     // Make functions global
     window.toggleAccordion = toggleAccordion;
     window.copyCode = copyCode;
 </script>
 </body>
-</html>    <h2 class="section-title"><i class="fas fa-microchip"></i> <span data-i18n="ard_title">Eye Safety Sensor System</span></h2>
-    <p class="section-sub" data-i18n="ard_sub">VisionGuard Arduino System – Full Detailed Guide</p>
-    <div class="cards-grid">
-        <div class="topic-card" onclick="toggleAccordion('ard-overview')"><i class="fas fa-robot"></i><h3 data-i18n="ard_ov_title">1. System Overview</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ard-components')"><i class="fas fa-microchip"></i><h3 data-i18n="ard_comp_title">2. Main Components</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ard-arch')"><i class="fas fa-project-diagram"></i><h3 data-i18n="ard_arch_title">3. Architecture</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ard-modules')"><i class="fas fa-cogs"></i><h3 data-i18n="ard_mod_title">4. Core Modules</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ard-auto')"><i class="fas fa-clock"></i><h3 data-i18n="ard_auto_title">5. Automation</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ard-workflow')"><i class="fas fa-chart-line"></i><h3 data-i18n="ard_work_title">6. Workflows</h3></div>
-    </div>
-    <div id="ard-overview" class="accordion-content"><div class="info-box"><h3><i class="fas fa-info-circle"></i> <span data-i18n="ard_ov_head">1. 🔰 Arduino System Overview</span></h3><div data-i18n="ard_ov_text"></div></div></div>
-    <div id="ard-components" class="accordion-content"><div class="info-box"><h3><i class="fas fa-microchip"></i> <span data-i18n="ard_comp_head">2. 🧠 Main Components</span></h3><h4 data-i18n="ard_board_title">2.1 🔷 Arduino Board</h4><p data-i18n="ard_board_text">Use වෙන්න පුළුවන්: Arduino Uno R3, ESP8266 NodeMCU, ESP32 Dev Board 👉 Best option: ESP32 (speed + connectivity)</p><h4 data-i18n="ard_comm_title">2.2 📡 Communication Modules</h4><div class="component-list"><div class="component-item" data-i18n="ard_comm1">🔹 WiFi (Recommended) ESP8266/ESP32 – Real-time control</div><div class="component-item" data-i18n="ard_comm2">🔹 Bluetooth HC-05 – Short distance control</div><div class="component-item" data-i18n="ard_comm3">🔹 GSM (Advanced) – SIM-based control (SMS/Call)</div></div><h4 data-i18n="ard_output_title">2.3 🔌 Output Devices (Controlled Devices)</h4><p data-i18n="ard_output_text">💡 Lights, 🔊 Speakers/Alarm, 🚪 Gate motor, 🌀 Fans (via 5V Relay Module 4 Channel)</p><h4 data-i18n="ard_input_title">2.4 📊 Input Sensors</h4><div class="component-list"><div class="component-item" data-i18n="ard_sensor1">🌡️ Temperature – DHT11</div><div class="component-item" data-i18n="ard_sensor2">🚶 Motion – PIR HC-SR501</div><div class="component-item" data-i18n="ard_sensor3">🔥 Gas/Smoke – MQ sensors</div><div class="component-item" data-i18n="ard_sensor4">🚪 Door status – Magnetic sensor</div></div></div></div>
-    <div id="ard-arch" class="accordion-content"><div class="info-box"><h3><i class="fas fa-project-diagram"></i> <span data-i18n="ard_arch_head">3. 🔁 System Architecture</span></h3><pre data-i18n="ard_arch_diagram">Android App → ↓ (WiFi/Bluetooth) → Communication Module → ↓ → Arduino/ESP Board → ↓ → Relays & Sensors → ↓ → Devices + Data Feedback</pre><p data-i18n="ard_arch_note">👉 Two-way system: Control (App → Arduino) + Monitoring (Arduino → App)</p></div></div>
-    <div id="ard-modules" class="accordion-content"><div class="info-box"><h3><i class="fas fa-cogs"></i> <span data-i18n="ard_mod_head">4. 🎛️ Core Functional Modules</span></h3><h4 data-i18n="ard_mod1_title">4.1 🔘 Device Control Module</h4><p data-i18n="ard_mod1_text">Command example: LIGHT_ON, LIGHT_OFF, FAN_ON → Arduino reads → digitalWrite HIGH/LOW</p><pre><code>if(command == "LIGHT_ON"){ digitalWrite(relayPin, HIGH); }</code></pre><h4 data-i18n="ard_mod2_title">4.2 📡 Communication Handling Module</h4><pre><code>if (client.available()) { String request = client.readStringUntil('\r'); }</code></pre><h4 data-i18n="ard_mod3_title">4.3 📊 Sensor Monitoring Module</h4><pre><code>int motion = digitalRead(pirPin); if(motion == HIGH){ /* alert */ }</code></pre><h4 data-i18n="ard_mod4_title">4.4 🚨 Alert System</h4><p data-i18n="ard_mod4_text">Trigger: Motion/Gas/Door opened → Buzzer ON, App notification, Auto recording</p><h4 data-i18n="ard_mod5_title">4.5 🔐 Security Logic</h4><p data-i18n="ard_mod5_text">Only authenticated commands, OTP login, Optional command encryption</p></div></div>
-    <div id="ard-auto" class="accordion-content"><div class="info-box"><h3><i class="fas fa-clock"></i> <span data-i18n="ard_auto_head">5. 🔄 Automation Features</span></h3><p data-i18n="ard_auto_sched">⏰ Scheduled Tasks: Light ON at 6PM, Fan OFF at 10PM</p><p data-i18n="ard_auto_smart">🤖 Smart Automation: Motion → Light ON, No motion → Light OFF</p><pre><code>if(motionDetected){ digitalWrite(lightRelay, HIGH); }</code></pre><h4 data-i18n="ard_power_title">6. 🔋 Power Management</h4><p data-i18n="ard_power_text">5V supply (Arduino), 12V (relay devices) + Voltage regulators + Proper grounding</p><h4 data-i18n="ard_cctv_title">7. 📹 CCTV Integration (Optional)</h4><p data-i18n="ard_cctv_text">ESP32-CAM Module: Arduino triggers → Motion → Camera record</p><h4 data-i18n="ard_future_title">9. 🛠️ Future Improvements</h4><p data-i18n="ard_future_text">🌐 Cloud sync (Firebase) | 🎙️ Voice control | 🤖 AI face recognition | 🔋 Battery backup</p><h4 data-i18n="ard_summary_title">10. 🧩 Summary</h4><p data-i18n="ard_summary_text">VisionGuard Arduino system: ✔ Device control ✔ Sensor monitoring ✔ Real-time communication ✔ Security automation 👉 "App එකේ brain එක → Arduino එකේ hands"</p></div></div>
-    <div id="ard-workflow" class="accordion-content"><div class="info-box"><h3><i class="fas fa-chart-line"></i> <span data-i18n="ard_work_head">8. 🧾 Sample Full Workflows</span></h3><h4 data-i18n="ard_work1_title">Scenario 1: Motion Detection</h4><ol class="workflow-steps"><li data-i18n="ard_w1_1">PIR sensor detects movement</li><li data-i18n="ard_w1_2">Arduino reads HIGH signal</li><li data-i18n="ard_w1_3">Buzzer ON</li><li data-i18n="ard_w1_4">Light ON</li><li data-i18n="ard_w1_5">App notification send</li></ol><h4 data-i18n="ard_work2_title">Scenario 2: Remote Light Control</h4><ol class="workflow-steps"><li data-i18n="ard_w2_1">User clicks "Light ON"</li><li data-i18n="ard_w2_2">App sends command</li><li data-i18n="ard_w2_3">Arduino receives</li><li data-i18n="ard_w2_4">Relay ON</li><li data-i18n="ard_w2_5">Light turns ON</li></ol></div></div>
-</div>
-
-<!-- Original Features -->
-<div class="section-container">
-    <h2 class="section-title" data-i18n="features_title">විශේෂාංග සහ ආරක්ෂණ ස්ථර</h2>
-    <p class="section-sub" data-i18n="features_sub">Smart TV සඳහා විශේෂයෙන් නිර්මාණය කළ ප්‍රබල ආරක්ෂණ පද්ධතිය</p>
-    <div class="cards-grid">
-        <div class="topic-card"><i class="fas fa-microchip"></i><h3 data-i18n="feat1_title">AI Threat Monitoring</h3><p data-i18n="feat1_desc">කෘතිම බුද්ධියෙන් හැකර් ප්‍රයත්න ක්ෂණිකව හඳුනාගැනීම</p></div>
-        <div class="topic-card"><i class="fas fa-child"></i><h3 data-i18n="feat2_title">Parental Control</h3><p data-i18n="feat2_desc">ළමුන් සඳහා ආරක්ෂිත අන්තර්ගතය සහතික කරයි</p></div>
-        <div class="topic-card"><i class="fas fa-cloud-upload-alt"></i><h3 data-i18n="feat3_title">Auto Updates</h3><p data-i18n="feat3_desc">නවතම ආරක්ෂණ පැච් ස්වයංක්‍රීයව ස්ථාපනය වේ</p></div>
-        <div class="topic-card"><i class="fas fa-chart-line"></i><h3 data-i18n="feat4_title">Live Reports</h3><p data-i18n="feat4_desc">ටීවී එකේ ආරක්ෂණ තත්ත්වය පිළිබඳ සවිස්තර වාර්තා</p></div>
-    </div>
-</div>
-
-<div class="section-container" style="background: rgba(10,20,45,0.6); border-radius: 2rem; text-align: center; padding: 2rem;"><h2 data-i18n="cta_title">ඔබගේ VisionGuard බලපත්‍රය ආරම්භ කරන්න</h2><p data-i18n="cta_desc">දින 30ක නොමිලේ අත්හදා බැලීමක්. කිසිදු කාඩ් එකක් අවශ්‍ය නොවේ.</p><a href="#" class="btn-primary" style="margin-top:1rem;"><i class="fas fa-shield-alt"></i> <span data-i18n="cta_btn">නොමිලේ ආරම්භ කරන්න</span></a></div>
-
-<footer class="footer"><p>© 2026 VisionGuard — Smart TV Protection. <span data-i18n="rights">සියලුම හිමිකම් ඇවිරිණි.</span></p><p><i class="fas fa-envelope"></i> support@visionguard.com | <i class="fas fa-phone-alt"></i> +94 76 320 4765</p></footer>
-
-<div id="appModal" class="modal"><div class="modal-content"><span class="close-modal">&times;</span><h2 style="text-align:center;">📱 VisionGuard App Interface</h2><div class="screenshot-grid"><div class="screenshot-card"><img src="https://placehold.co/400x800/1e293b/3b82f6?text=Home" alt="Home"><p data-i18n="modal_home">Main Dashboard</p></div><div class="screenshot-card"><img src="https://placehold.co/400x800/1e293b/38bdf8?text=IR+Remote" alt="IR"><p data-i18n="modal_ir">IR Remote</p></div><div class="screenshot-card"><img src="https://placehold.co/400x800/1e293b/2563eb?text=Sensors" alt="Sensors"><p data-i18n="modal_sensors">Sensor Data</p></div></div><div class="info-box"><h3 data-i18n="modal_details_title">App Details</h3><ul><li data-i18n="modal_detail1">✅ Universal IR Remote (TV, AC, Fan, Set-top box)</li><li data-i18n="modal_detail2">✅ Real-time sensor monitoring (Motion, Temp, Gas)</li><li data-i18n="modal_detail3">✅ Device control (Lights, Fans, Gate, Alarm)</li><li data-i18n="modal_detail4">✅ Automation rules + Scheduling</li><li data-i18n="modal_detail5">✅ Secure authentication + OTP</li><li data-i18n="modal_detail6">Version 2.0 | Size: 22MB</li></ul><p><strong data-i18n="modal_developer">Developer:</strong> W.K.N.Vanel Fernando | <strong data-i18n="modal_email">Email:</strong> kavindusky07@gmail.com | <strong data-i18n="modal_phone">Phone:</strong> +94 76 320 4765</p></div></div></div>
-
-<script type="module">
-    import * as THREE from 'three';
-    const canvas = document.getElementById('bg-canvas');
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    const particleCount = 2000;
-    const particlesGeometry = new THREE.BufferGeometry();
-    const posArray = new Float32Array(particleCount * 3);
-    for(let i=0; i<particleCount; i++) { posArray[i*3]=(Math.random()-0.5)*100; posArray[i*3+1]=(Math.random()-0.5)*60; posArray[i*3+2]=(Math.random()-0.5)*50-30; }
-    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-    const particlesMat = new THREE.PointsMaterial({ color: 0x3b82f6, size: 0.12, transparent: true, opacity: 0.7 });
-    const particles = new THREE.Points(particlesGeometry, particlesMat);
-    scene.add(particles);
-    const starCount = 400;
-    const starGeo = new THREE.BufferGeometry();
-    const starPos = new Float32Array(starCount * 3);
-    const starSpeed = new Float32Array(starCount);
-    for(let i=0; i<starCount; i++) { starPos[i*3]=(Math.random()-0.5)*120; starPos[i*3+1]=(Math.random()-0.5)*50; starPos[i*3+2]=(Math.random()-0.5)*70-35; starSpeed[i]=0.04+Math.random()*0.1; }
-    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-    const starMat = new THREE.PointsMaterial({ color: 0xffaa66, size: 0.1, transparent: true, opacity: 0.9 });
-    const stars = new THREE.Points(starGeo, starMat);
-    scene.add(stars);
-    const ringGeo = new THREE.TorusGeometry(2.8, 0.06, 128, 300);
-    const ringMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x1e3a8a, emissiveIntensity: 1.0 });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    scene.add(ring);
-    const ring2Geo = new THREE.TorusGeometry(3.5, 0.04, 128, 300);
-    const ring2Mat = new THREE.MeshStandardMaterial({ color: 0x60a5fa, emissive: 0x2563eb, emissiveIntensity: 0.6 });
-    const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
-    scene.add(ring2);
-    const ambient = new THREE.AmbientLight(0x111122);
-    scene.add(ambient);
-    const light = new THREE.PointLight(0x3b82f6, 1.2, 35);
-    light.position.set(3,4,5);
-    scene.add(light);
-    camera.position.z = 14;
-    camera.position.y = 1.5;
-    let time = 0;
-    function animate() {
-        requestAnimationFrame(animate);
-        time += 0.008;
-        particles.rotation.y = time * 0.08;
-        particles.rotation.x = Math.sin(time * 0.15) * 0.15;
-        const positions = stars.geometry.attributes.position.array;
-        for(let i=0; i<starCount; i++) { positions[i*3] += starSpeed[i] * 0.3; if(positions[i*3] > 65) positions[i*3] = -65; }
-        stars.geometry.attributes.position.needsUpdate = true;
-        ring.rotation.x = Math.sin(time * 0.4) * 0.3;
-        ring.rotation.y = time * 0.25;
-        ring.rotation.z = Math.cos(time * 0.3) * 0.2;
-        ring2.rotation.x = Math.sin(time * 0.5) * 0.2;
-        ring2.rotation.y = time * 0.35;
-        ring2.rotation.z = Math.sin(time * 0.4) * 0.15;
-        camera.position.x += (0 - camera.position.x) * 0.02;
-        camera.lookAt(0,0,0);
-        renderer.render(scene, camera);
-    }
-    animate();
-    window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
-</script>
-
-<script>
-    function toggleAccordion(id) { const el = document.getElementById(id); if(el.classList.contains('active')) el.classList.remove('active'); else { document.querySelectorAll('.accordion-content').forEach(e => e.classList.remove('active')); el.classList.add('active'); } }
-    
-    // FULL COMPLETE TRANSLATIONS for ALL content (EN, SI, TA)
-    const translations = {
-        en: {
-            tagline:"SMART TV PROTECTION", badge:"Trusted Protection", hero_title1:"Secure Your Smart TV", hero_title2:"VisionGuard", hero_title3:"Keeps It Safe", hero_desc:"Protect your TV from unauthorized access, vulnerabilities & digital threats. Next-gen AI Shield.", btn_download:"Download Now", btn_video:"Watch Demo", btn_demo:"Preview App UI", realtime:"Real-time Screen Protection", features_title:"Features & Security Layers", features_sub:"Powerful protection system built specifically for Smart TVs", feat1_title:"AI Threat Monitoring", feat1_desc:"Instant hacker attempt detection using AI", feat2_title:"Parental Control", feat2_desc:"Ensure safe content for children", feat3_title:"Auto Updates", feat3_desc:"Latest security patches install automatically", feat4_title:"Live Reports", feat4_desc:"Detailed security status of your TV", cta_title:"Start Your VisionGuard License", cta_desc:"30-day free trial. No credit card required.", cta_btn:"Start Free", rights:"All rights reserved.",
-            ir_title:"Universal IR Remote System", ir_sub:"VisionGuard + IR Universal Remote System (Full Guide)", ir_ov_title:"1. System Overview", ir_comp_title:"2. Components", ir_cap_title:"3. Capture Codes", ir_send_title:"4. Send Signals", ir_db_title:"5. Code Library", ir_app_title:"6. App Integration",
-            ir_ov_head:"🔰 IR System Overview", ir_ov_text:"IR (Infrared) system is used to control TV, AC, Fan, Set-top box devices. When added to VisionGuard: 📱 App can simulate IR remote. 📡 Arduino sends IR signals to control devices. 👉 Basically: Phone = Universal Remote",
-            ir_comp_head:"🧩 Required Components", ir_comp1:"🔴 IR LED Transmitter Module – signal send", ir_comp2:"📡 IR Receiver Module VS1838B – capture remote codes", ir_comp3:"🎮 ESP32 Dev Board / Arduino board", ir_comp4:"🔧 Resistor (220Ω) + Breadboard + jumper wires",
-            ir_cap_head:"🔍 Step 1 – IR Codes Capture", ir_cap_circuit:"<strong>Circuit:</strong> IR Receiver → Arduino | VCC → 5V | GND → GND | OUT → Digital pin (e.g., D15)", ir_cap_note:"👉 Serial Monitor displays codes. Save all button codes. Example: Power button → 0xFFA25D, Volume Up → 0xFF629D",
-            ir_send_head:"📤 Step 2 – IR Signal Send", ir_send_circuit:"<strong>Circuit:</strong> IR LED → Arduino | Signal → Pin (e.g., D4) | GND → GND", ir_send_note:"👉 This turns device ON/OFF",
-            ir_db_head:"🎛️ IR Command Database (Important)", ir_db_text:"You need to build: 👉 Device-wise IR Code Library", ir_db_note:"👉 This makes app control easy",
-            ir_app_head:"📱 App Integration (VisionGuard)", ir_app_flow:"<strong>Flow:</strong> User presses 'TV Power' → App sends 'TV_POWER' → Arduino receives → IR signal send", ir_arch_title:"🔄 Combined System (Full Architecture)", ir_arch_diagram:"📱 Android App → ↓ WiFi/Bluetooth → 📡 ESP32/Arduino → ↓ → 🎛️ Relays + IR Transmitter → ↓ → 💡 Devices + 📺 IR Devices", ir_arch_note:"👉 One system controls: Lights ✔ Fan ✔ TV / AC ✔", ir_auto_title:"🤖 Smart Automation with IR", ir_auto_note:"🌡️ Temperature High → AC ON 👉 Fully smart home system 🔥", ir_adv_title:"📦 Advanced IR Features", ir_adv1:"🔹 Multi-Device Support: TV, AC, Fan, DVD (Each device → separate code set)", ir_adv2:"🔹 AC Remote (Special Case): Complex signals → Use IRremoteESP8266 library", ir_issues_title:"⚠️ Common Issues & Fixes", ir_issue1:"❌ IR not working → Check LED direction, Add resistor", ir_issue2:"❌ Weak signal → Use transistor amplifier", ir_issue3:"❌ Wrong code → Re-capture correctly", ir_power_title:"🔋 Power + Stability", ir_power_text:"Use external 5V supply, Avoid direct high load", ir_workflow_title:"🧪 Full Example Workflow - TV Control", ir_wf1:"User opens app", ir_wf2:"Clicks 'Power'", ir_wf3:"App sends 'TV_POWER'", ir_wf4:"ESP32 receives", ir_wf5:"IR LED sends signal", ir_wf6:"TV ON/OFF", ir_summary_title:"🧠 Final System Summary", ir_summary_text:"VisionGuard + IR system: ✔ Remote appliances control ✔ IR devices control ✔ Automation support ✔ Mobile-based universal remote 👉 'One App → Control Everything (Electrical + Remote Devices)'", ir_bonus_title:"🔥 Bonus (Important Tip)", ir_bonus_text:"👉 Best setup: ESP32 + WiFi, IR transmitter + receiver, Relay module 👉 Result: Complete Smart Home + Universal Remote System",
-            ard_title:"Eye Safety Sensor System", ard_sub:"VisionGuard Arduino System – Full Detailed Guide", ard_ov_title:"1. System Overview", ard_comp_title:"2. Main Components", ard_arch_title:"3. Architecture", ard_mod_title:"4. Core Modules", ard_auto_title:"5. Automation", ard_work_title:"6. Workflows",
-            ard_ov_head:"1. 🔰 Arduino System Overview", ard_ov_text:"VisionGuard project's Arduino part basically: 👉 Real-world devices control + sensor data collection unit. Android app sends commands → Arduino executes them. Sensors data → Arduino → App (real-time monitoring). 👉 Two-way system: Control (App → Arduino) + Monitoring (Arduino → App)",
-            ard_comp_head:"2. 🧠 Main Components", ard_board_title:"2.1 🔷 Arduino Board", ard_board_text:"Options: Arduino Uno R3, ESP8266 NodeMCU, ESP32 Dev Board 👉 Best: ESP32 (speed + connectivity)", ard_comm_title:"2.2 📡 Communication Modules", ard_comm1:"🔹 WiFi (Recommended) ESP8266/ESP32 – Real-time control", ard_comm2:"🔹 Bluetooth HC-05 – Short distance", ard_comm3:"🔹 GSM (Advanced) – SMS/Call control", ard_output_title:"2.3 🔌 Output Devices", ard_output_text:"💡 Lights, 🔊 Speakers/Alarm, 🚪 Gate motor, 🌀 Fans (via 5V Relay Module 4 Channel)", ard_input_title:"2.4 📊 Input Sensors", ard_sensor1:"🌡️ Temperature – DHT11", ard_sensor2:"🚶 Motion – PIR HC-SR501", ard_sensor3:"🔥 Gas/Smoke – MQ sensors", ard_sensor4:"🚪 Door status – Magnetic sensor",
-            ard_arch_head:"3. 🔁 System Architecture", ard_arch_diagram:"Android App → ↓ (WiFi/Bluetooth) → Communication Module → ↓ → Arduino/ESP Board → ↓ → Relays & Sensors → ↓ → Devices + Data Feedback", ard_arch_note:"👉 Two-way system: Control (App → Arduino) + Monitoring (Arduino → App)",
-            ard_mod_head:"4. 🎛️ Core Functional Modules", ard_mod1_title:"4.1 🔘 Device Control Module", ard_mod1_text:"Command example: LIGHT_ON, LIGHT_OFF, FAN_ON → Arduino reads → digitalWrite HIGH/LOW", ard_mod2_title:"4.2 📡 Communication Handling Module", ard_mod3_title:"4.3 📊 Sensor Monitoring Module", ard_mod4_title:"4.4 🚨 Alert System", ard_mod4_text:"Trigger: Motion/Gas/Door opened → Buzzer ON, App notification, Auto recording", ard_mod5_title:"4.5 🔐 Security Logic", ard_mod5_text:"Only authenticated commands, OTP login, Optional command encryption",
-            ard_auto_head:"5. 🔄 Automation Features", ard_auto_sched:"⏰ Scheduled Tasks: Light ON at 6PM, Fan OFF at 10PM", ard_auto_smart:"🤖 Smart Automation: Motion → Light ON, No motion → Light OFF", ard_power_title:"6. 🔋 Power Management", ard_power_text:"5V supply (Arduino), 12V (relay devices) + Voltage regulators + Proper grounding", ard_cctv_title:"7. 📹 CCTV Integration (Optional)", ard_cctv_text:"ESP32-CAM Module: Arduino triggers → Motion → Camera record", ard_future_title:"9. 🛠️ Future Improvements", ard_future_text:"🌐 Cloud sync (Firebase) | 🎙️ Voice control | 🤖 AI face recognition | 🔋 Battery backup", ard_summary_title:"10. 🧩 Summary", ard_summary_text:"VisionGuard Arduino system: ✔ Device control ✔ Sensor monitoring ✔ Real-time communication ✔ Security automation 👉 'App's brain → Arduino's hands'",
-            ard_work_head:"8. 🧾 Sample Full Workflows", ard_work1_title:"Scenario 1: Motion Detection", ard_w1_1:"PIR sensor detects movement", ard_w1_2:"Arduino reads HIGH signal", ard_w1_3:"Buzzer ON", ard_w1_4:"Light ON", ard_w1_5:"App notification send", ard_work2_title:"Scenario 2: Remote Light Control", ard_w2_1:"User clicks 'Light ON'", ard_w2_2:"App sends command", ard_w2_3:"Arduino receives", ard_w2_4:"Relay ON", ard_w2_5:"Light turns ON",
-            modal_home:"Main Dashboard", modal_ir:"IR Remote", modal_sensors:"Sensor Data", modal_details_title:"App Details", modal_detail1:"✅ Universal IR Remote (TV, AC, Fan, Set-top box)", modal_detail2:"✅ Real-time sensor monitoring (Motion, Temp, Gas)", modal_detail3:"✅ Device control (Lights, Fans, Gate, Alarm)", modal_detail4:"✅ Automation rules + Scheduling", modal_detail5:"✅ Secure authentication + OTP", modal_detail6:"Version 2.0 | Size: 22MB", modal_developer:"Developer:", modal_email:"Email:", modal_phone:"Phone:"
-        },
-        si: {
-            tagline:"SMART TV PROTECTION", badge:"විශ්වාසයෙන් ආරක්ෂා කරමු", hero_title1:"ඔබේ Smart TV එක", hero_title2:"VisionGuard", hero_title3:"සුරක්ෂිත කරයි", hero_desc:"අනවසර ප්‍රවේශය, දුර්වලතා සහ ඩිජිටල් තර්ජන වලින් ඔබේ රූපවාහිනිය ආරක්ෂා කරන්න. යාවත්කාලීන AI ආරක්ෂක පලිහ.", btn_download:"දැන්ම ලබාගන්න", btn_video:"ආරක්ෂණ වීඩියෝව", btn_demo:"ඇප් පෙනුම බලන්න", realtime:"සැබෑ කාලීන තිර ආරක්ෂණය", features_title:"විශේෂාංග සහ ආරක්ෂණ ස්ථර", features_sub:"Smart TV සඳහා විශේෂයෙන් නිර්මාණය කළ ප්‍රබල ආරක්ෂණ පද්ධතිය", feat1_title:"AI තර්ජන නිරීක්ෂණය", feat1_desc:"කෘතිම බුද්ධියෙන් හැකර් ප්‍රයත්න ක්ෂණිකව හඳුනාගැනීම", feat2_title:"දෙමාපිය පාලනය", feat2_desc:"ළමුන් සඳහා ආරක්ෂිත අන්තර්ගතය සහතික කරයි", feat3_title:"ස්වයංක්‍රීය යාවත්කාලීන", feat3_desc:"නවතම ආරක්ෂණ පැච් ස්වයංක්‍රීයව ස්ථාපනය වේ", feat4_title:"තත්‍ය කාලීන වාර්තා", feat4_desc:"ටීවී එකේ ආරක්ෂණ තත්ත්වය පිළිබඳ සවිස්තර වාර්තා", cta_title:"ඔබගේ VisionGuard බලපත්‍රය ආරම්භ කරන්න", cta_desc:"දින 30ක නොමිලේ අත්හදා බැලීමක්. කිසිදු කාඩ් එකක් අවශ්‍ය නොවේ.", cta_btn:"නොමිලේ ආරම්භ කරන්න", rights:"සියලුම හිමිකම් ඇවිරිණි.",
-            ir_title:"Universal IR Remote System", ir_sub:"VisionGuard + IR Universal Remote System (සම්පූර්ණ මාර්ගෝපදේශය)", ir_ov_title:"1. System Overview", ir_comp_title:"2. Components", ir_cap_title:"3. Capture Codes", ir_send_title:"4. Send Signals", ir_db_title:"5. Code Library", ir_app_title:"6. App Integration",
-            ir_ov_head:"🔰 IR System Overview", ir_ov_text:"IR (Infrared) system එක use වෙන්නේ: TV, AC, Fan, Set-top box වගේ devices remote control කරන්න. VisionGuard project එකට add කරාම: 📱 App එකෙන් IR remote simulate කරන්න පුළුවන්. 📡 Arduino → IR signal send කරලා devices control කරන්න පුළුවන්. 👉 Basically: Phone = Universal Remote",
-            ir_comp_head:"🧩 Required Components", ir_comp1:"🔴 IR LED Transmitter Module – signal send කරන්න", ir_comp2:"📡 IR Receiver Module VS1838B – remote codes capture කරන්න", ir_comp3:"🎮 ESP32 Dev Board / Arduino board", ir_comp4:"🔧 Resistor (220Ω) + Breadboard + jumper wires",
-            ir_cap_head:"🔍 Step 1 – IR Codes Capture කිරීම", ir_cap_circuit:"<strong>Circuit:</strong> IR Receiver → Arduino | VCC → 5V | GND → GND | OUT → Digital pin (e.g., D15)", ir_cap_note:"👉 Serial Monitor එකේ codes display වෙනවා. ඔයාගේ remote එකේ all buttons codes save කරන්න. Example: Power button → 0xFFA25D, Volume Up → 0xFF629D",
-            ir_send_head:"📤 Step 2 – IR Signal Send කිරීම", ir_send_circuit:"<strong>Circuit:</strong> IR LED → Arduino | Signal → Pin (e.g., D4) | GND → GND", ir_send_note:"👉 මේකෙන් device ON/OFF වෙයි",
-            ir_db_head:"🎛️ IR Command Database (Important)", ir_db_text:"ඔයාට build කරන්න තියෙන්නේ: 👉 Device-wise IR Code Library", ir_db_note:"👉 මේක app එකෙන් control කරන්න easy වෙනවා",
-            ir_app_head:"📱 App Integration (VisionGuard)", ir_app_flow:"<strong>Flow:</strong> User presses 'TV Power' → App sends 'TV_POWER' → Arduino receives → IR signal send", ir_arch_title:"🔄 Combined System (Full Architecture)", ir_arch_diagram:"📱 Android App → ↓ WiFi/Bluetooth → 📡 ESP32/Arduino → ↓ → 🎛️ Relays + IR Transmitter → ↓ → 💡 Devices + 📺 IR Devices", ir_arch_note:"👉 එක system එකෙන්: Lights control ✔ Fan control ✔ TV / AC control ✔", ir_auto_title:"🤖 Smart Automation with IR", ir_auto_note:"🌡️ Temperature High → AC ON 👉 Fully smart home system 🔥", ir_adv_title:"📦 Advanced IR Features", ir_adv1:"🔹 Multi-Device Support: TV, AC, Fan, DVD (Each device → separate code set)", ir_adv2:"🔹 AC Remote (Special Case): Complex signals → Use IRremoteESP8266 library (ESP32 සඳහා best)", ir_issues_title:"⚠️ Common Issues & Fixes", ir_issue1:"❌ IR not working → Check LED direction, Add resistor", ir_issue2:"❌ Weak signal → Use transistor amplifier", ir_issue3:"❌ Wrong code → Re-capture correctly", ir_power_title:"🔋 Power + Stability", ir_power_text:"Use external 5V supply, Avoid direct high load", ir_workflow_title:"🧪 Full Example Workflow - TV Control", ir_wf1:"User opens app", ir_wf2:"Clicks 'Power'", ir_wf3:"App sends 'TV_POWER'", ir_wf4:"ESP32 receives", ir_wf5:"IR LED sends signal", ir_wf6:"TV ON/OFF", ir_summary_title:"🧠 Final System Summary", ir_summary_text:"VisionGuard + IR system: ✔ Remote appliances control ✔ IR devices control ✔ Automation support ✔ Mobile-based universal remote 👉 'One App → Control Everything (Electrical + Remote Devices)'", ir_bonus_title:"🔥 Bonus (Important Tip)", ir_bonus_text:"👉 Best setup: ESP32 + WiFi, IR transmitter + receiver, Relay module 👉 Result: Complete Smart Home + Universal Remote System",
-            ard_title:"Eye Safety Sensor System", ard_sub:"VisionGuard Arduino System – සම්පූර්ණ මාර්ගෝපදේශය", ard_ov_title:"1. System Overview", ard_comp_title:"2. Main Components", ard_arch_title:"3. Architecture", ard_mod_title:"4. Core Modules", ard_auto_title:"5. Automation", ard_work_title:"6. Workflows",
-            ard_ov_head:"1. 🔰 Arduino System Overview", ard_ov_text:"VisionGuard project එකේ Arduino part එක basically: 👉 Real-world devices control + sensor data collection unit එකක්. Android app එකෙන් commands එනවා → Arduino ඒවා execute කරනවා. Sensors data → Arduino → App (real-time monitoring). 👉 Two-way system: Control (App → Arduino) + Monitoring (Arduino → App)",
-            ard_comp_head:"2. 🧠 Main Components", ard_board_title:"2.1 🔷 Arduino Board", ard_board_text:"Use වෙන්න පුළුවන්: Arduino Uno R3, ESP8266 NodeMCU, ESP32 Dev Board 👉 Best option: ESP32 (speed + connectivity)", ard_comm_title:"2.2 📡 Communication Modules", ard_comm1:"🔹 WiFi (Recommended) ESP8266/ESP32 – Real-time control", ard_comm2:"🔹 Bluetooth HC-05 – Short distance control", ard_comm3:"🔹 GSM (Advanced) – SIM-based control (SMS/Call)", ard_output_title:"2.3 🔌 Output Devices (Controlled Devices)", ard_output_text:"💡 Lights, 🔊 Speakers/Alarm, 🚪 Gate motor, 🌀 Fans (via 5V Relay Module 4 Channel)", ard_input_title:"2.4 📊 Input Sensors", ard_sensor1:"🌡️ Temperature – DHT11", ard_sensor2:"🚶 Motion – PIR HC-SR501", ard_sensor3:"🔥 Gas/Smoke – MQ sensors", ard_sensor4:"🚪 Door status – Magnetic sensor",
-            ard_arch_head:"3. 🔁 System Architecture", ard_arch_diagram:"Android App → ↓ (WiFi/Bluetooth) → Communication Module → ↓ → Arduino/ESP Board → ↓ → Relays & Sensors → ↓ → Devices + Data Feedback", ard_arch_note:"👉 Two-way system: Control (App → Arduino) + Monitoring (Arduino → App)",
-            ard_mod_head:"4. 🎛️ Core Functional Modules", ard_mod1_title:"4.1 🔘 Device Control Module", ard_mod1_text:"Command example: LIGHT_ON, LIGHT_OFF, FAN_ON → Arduino reads → digitalWrite HIGH/LOW", ard_mod2_title:"4.2 📡 Communication Handling Module", ard_mod3_title:"4.3 📊 Sensor Monitoring Module", ard_mod4_title:"4.4 🚨 Alert System", ard_mod4_text:"Trigger: Motion/Gas/Door opened → Buzzer ON, App notification, Auto recording", ard_mod5_title:"4.5 🔐 Security Logic", ard_mod5_text:"Only authenticated commands, OTP login, Optional command encryption",
-            ard_auto_head:"5. 🔄 Automation Features", ard_auto_sched:"⏰ Scheduled Tasks: Light ON at 6PM, Fan OFF at 10PM", ard_auto_smart:"🤖 Smart Automation: Motion → Light ON, No motion → Light OFF", ard_power_title:"6. 🔋 Power Management", ard_power_text:"5V supply (Arduino), 12V (relay devices) + Voltage regulators + Proper grounding", ard_cctv_title:"7. 📹 CCTV Integration (Optional)", ard_cctv_text:"ESP32-CAM Module: Arduino triggers → Motion → Camera record", ard_future_title:"9. 🛠️ Future Improvements", ard_future_text:"🌐 Cloud sync (Firebase) | 🎙️ Voice control | 🤖 AI face recognition | 🔋 Battery backup", ard_summary_title:"10. 🧩 Summary", ard_summary_text:"VisionGuard Arduino system: ✔ Device control ✔ Sensor monitoring ✔ Real-time communication ✔ Security automation 👉 'App එකේ brain එක → Arduino එකේ hands'",
-            ard_work_head:"8. 🧾 Sample Full Workflows", ard_work1_title:"Scenario 1: Motion Detection", ard_w1_1:"PIR sensor detects movement", ard_w1_2:"Arduino reads HIGH signal", ard_w1_3:"Buzzer ON", ard_w1_4:"Light ON", ard_w1_5:"App notification send", ard_work2_title:"Scenario 2: Remote Light Control", ard_w2_1:"User clicks 'Light ON'", ard_w2_2:"App sends command", ard_w2_3:"Arduino receives", ard_w2_4:"Relay ON", ard_w2_5:"Light turns ON",
-            modal_home:"මුල් පිටුව", modal_ir:"IR දුරස්ථ", modal_sensors:"සංවේදක දත්ත", modal_details_title:"ඇප් විස්තර", modal_detail1:"✅ Universal IR Remote (TV, AC, Fan, Set-top box)", modal_detail2:"✅ නිරවද්‍ය සංවේදක නිරීක්ෂණ (චලනය, උෂ්ණත්වය, වායුව)", modal_detail3:"✅ උපාංග පාලනය (ලයිට්, ෆෑන්, ගේට්ටු, අනතුරු ඇඟවීම)", modal_detail4:"✅ ස්වයංක්‍රීයකරණ රීති + කාලසටහන්", modal_detail5:"✅ ආරක්ෂිත සත්‍යාපනය + OTP", modal_detail6:"අනුවාදය 2.0 | ප්‍රමාණය: 22MB", modal_developer:"සංවර්ධකයා:", modal_email:"විද්‍යුත් තැපෑල:", modal_phone:"දුරකථනය:"
-        },
-        ta: {
-            tagline:"ஸ்மார்ட் டிவி பாதுகாப்பு", badge:"நம்பிக்கையான பாதுகாப்பு", hero_title1:"உங்கள் ஸ்மார்ட் டிவியை", hero_title2:"VisionGuard", hero_title3:"பாதுகாக்கிறது", hero_desc:"அனுமதியில்லாத அணுகல், பாதிப்புகள் மற்றும் டிஜிட்டல் அச்சுறுத்தல்களில் இருந்து உங்கள் டிவியைப் பாதுகாக்கிறது. அடுத்த தலைமுறை AI கவசம்.", btn_download:"இப்போது பதிவிறக்கவும்", btn_video:"பதிப்புரிமை வீடியோ", btn_demo:"ஆப் இடைமுகத்தை முன்வி", realtime:"நிகழ்நேர திரைப் பாதுகாப்பு", features_title:"அம்சங்கள் மற்றும் பாதுகாப்பு அடுக்குகள்", features_sub:"ஸ்மார்ட் டிவிகளுக்காக சிறப்பாக வடிவமைக்கப்பட்ட சக்திவாய்ந்த பாதுகாப்பு அமைப்பு", feat1_title:"AI அச்சுறுத்தல் கண்காணிப்பு", feat1_desc:"செயற்கை நுண்ணறிவைப் பயன்படுத்தி உடனடி ஹேக்கர் முயற்சி கண்டறிதல்", feat2_title:"பெற்றோர் கட்டுப்பாடு", feat2_desc:"குழந்தைகளுக்கான பாதுகாப்பான உள்ளடக்கத்தை உறுதி செய்கிறது", feat3_title:"தானியங்கி புதுப்பிப்புகள்", feat3_desc:"புதிய பாதுகாப்பு இணைப்புகள் தானாக நிறுவப்படும்", feat4_title:"நிகழ்நேர அறிக்கைகள்", feat4_desc:"உங்கள் டிவியின் விரிவான பாதுகாப்பு நிலை", cta_title:"உங்கள் VisionGuard உரிமத்தைத் தொடங்குங்கள்", cta_desc:"30 நாள் இலவச சோதனை. கிரெடிட் கார்டு தேவையில்லை.", cta_btn:"இலவசமாகத் தொடங்குங்கள்", rights:"அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை.",
-            ir_title:"Universal IR Remote System", ir_sub:"VisionGuard + IR Universal Remote System (முழு வழிகாட்டி)", ir_ov_title:"1. System Overview", ir_comp_title:"2. Components", ir_cap_title:"3. Capture Codes", ir_send_title:"4. Send Signals", ir_db_title:"5. Code Library", ir_app_title:"6. App Integration",
-            ir_ov_head:"🔰 IR System Overview", ir_ov_text:"IR (Infrared) system TV, AC, Fan, Set-top box சாதனங்களை கட்டுப்படுத்த பயன்படுகிறது. VisionGuard திட்டத்தில் சேர்க்கும்போது: 📱 ஆப் மூலம் IR ரிமோட்டை உருவகப்படுத்தலாம். 📡 Arduino IR சிக்னல்களை அனுப்பி சாதனங்களை கட்டுப்படுத்துகிறது. 👉 அடிப்படையில்: Phone = Universal Remote",
-            ir_comp_head:"🧩 Required Components", ir_comp1:"🔴 IR LED Transmitter Module – சமிக்ஞை அனுப்ப", ir_comp2:"📡 IR Receiver Module VS1838B – ரிமோட் குறியீடுகளைப் பிடிக்க", ir_comp3:"🎮 ESP32 Dev Board / Arduino board", ir_comp4:"🔧 Resistor (220Ω) + Breadboard + jumper wires",
-            ir_cap_head:"🔍 Step 1 – IR Codes Capture", ir_cap_circuit:"<strong>Circuit:</strong> IR Receiver → Arduino | VCC → 5V | GND → GND | OUT → Digital pin (e.g., D15)", ir_cap_note:"👉 Serial Monitor குறியீடுகளைக் காட்டுகிறது. உங்கள் ரிமோட்டின் அனைத்து பொத்தான் குறியீடுகளையும் சேமிக்கவும். எடுத்துக்காட்டு: Power button → 0xFFA25D, Volume Up → 0xFF629D",
-            ir_send_head:"📤 Step 2 – IR Signal Send", ir_send_circuit:"<strong>Circuit:</strong> IR LED → Arduino | Signal → Pin (e.g., D4) | GND → GND", ir_send_note:"👉 இது சாதனத்தை ON/OFF செய்கிறது",
-            ir_db_head:"🎛️ IR Command Database (Important)", ir_db_text:"நீங்கள் உருவாக்க வேண்டியது: 👉 சாதனம் சார்ந்த IR குறியீடு நூலகம்", ir_db_note:"👉 இது ஆப் கட்டுப்பாட்டை எளிதாக்குகிறது",
-            ir_app_head:"📱 App Integration (VisionGuard)", ir_app_flow:"<strong>Flow:</strong> User presses 'TV Power' → App sends 'TV_POWER' → Arduino receives → IR signal send", ir_arch_title:"🔄 Combined System (Full Architecture)", ir_arch_diagram:"📱 Android App → ↓ WiFi/Bluetooth → 📡 ESP32/Arduino → ↓ → 🎛️ Relays + IR Transmitter → ↓ → 💡 Devices + 📺 IR Devices", ir_arch_note:"👉 ஒரு அமைப்பு கட்டுப்படுத்துகிறது: Lights ✔ Fan ✔ TV / AC ✔", ir_auto_title:"🤖 Smart Automation with IR", ir_auto_note:"🌡️ வெப்பநிலை அதிகமானால் → AC ON 👉 முழு ஸ்மார்ட் ஹோம் சிஸ்டம் 🔥", ir_adv_title:"📦 Advanced IR Features", ir_adv1:"🔹 Multi-Device Support: TV, AC, Fan, DVD (ஒவ்வொரு சாதனத்திற்கும் தனி குறியீடு தொகுப்பு)", ir_adv2:"🔹 AC Remote (Special Case): Complex signals → Use IRremoteESP8266 library", ir_issues_title:"⚠️ Common Issues & Fixes", ir_issue1:"❌ IR not working → Check LED direction, Add resistor", ir_issue2:"❌ Weak signal → Use transistor amplifier", ir_issue3:"❌ Wrong code → Re-capture correctly", ir_power_title:"🔋 Power + Stability", ir_power_text:"Use external 5V supply, Avoid direct high load", ir_workflow_title:"🧪 Full Example Workflow - TV Control", ir_wf1:"User opens app", ir_wf2:"Clicks 'Power'", ir_wf3:"App sends 'TV_POWER'", ir_wf4:"ESP32 receives", ir_wf5:"IR LED sends signal", ir_wf6:"TV ON/OFF", ir_summary_title:"🧠 Final System Summary", ir_summary_text:"VisionGuard + IR system: ✔ Remote appliances control ✔ IR devices control ✔ Automation support ✔ Mobile-based universal remote 👉 'One App → Control Everything (Electrical + Remote Devices)'", ir_bonus_title:"🔥 Bonus (Important Tip)", ir_bonus_text:"👉 Best setup: ESP32 + WiFi, IR transmitter + receiver, Relay module 👉 Result: Complete Smart Home + Universal Remote System",
-            ard_title:"Eye Safety Sensor System", ard_sub:"VisionGuard Arduino System – முழு வழிகாட்டி", ard_ov_title:"1. System Overview", ard_comp_title:"2. Main Components", ard_arch_title:"3. Architecture", ard_mod_title:"4. Core Modules", ard_auto_title:"5. Automation", ard_work_title:"6. Workflows",
-            ard_ov_head:"1. 🔰 Arduino System Overview", ard_ov_text:"VisionGuard திட்டத்தின் Arduino பகுதி: 👉 நிஜ-உலக சாதன கட்டுப்பாடு + சென்சார் தரவு சேகரிப்பு அலகு. Android ஆப் கட்டளைகளை அனுப்புகிறது → Arduino அவற்றை செயல்படுத்துகிறது. சென்சார் தரவு → Arduino → ஆப் (நிகழ்நேர கண்காணிப்பு). 👉 இருதிசை அமைப்பு: கட்டுப்பாடு (ஆப் → Arduino) + கண்காணிப்பு (Arduino → ஆப்)",
-            ard_comp_head:"2. 🧠 Main Components", ard_board_title:"2.1 🔷 Arduino Board", ard_board_text:"விருப்பங்கள்: Arduino Uno R3, ESP8266 NodeMCU, ESP32 Dev Board 👉 சிறந்தது: ESP32 (வேகம் + இணைப்பு)", ard_comm_title:"2.2 📡 Communication Modules", ard_comm1:"🔹 WiFi (Recommended) ESP8266/ESP32 – நிகழ்நேர கட்டுப்பாடு", ard_comm2:"🔹 Bluetooth HC-05 – குறுகிய தூரம்", ard_comm3:"🔹 GSM (Advanced) – எஸ்எம்எஸ்/அழைப்பு கட்டுப்பாடு", ard_output_title:"2.3 🔌 Output Devices", ard_output_text:"💡 விளக்குகள், 🔊 ஒலிபெருக்கிகள்/அலாரம், 🚪 வாயில் மோட்டார், 🌀 விசிறிகள் (5V ரிலே தொகுதி 4 சேனல் மூலம்)", ard_input_title:"2.4 📊 Input Sensors", ard_sensor1:"🌡️ வெப்பநிலை – DHT11", ard_sensor2:"🚶 இயக்கம் – PIR HC-SR501", ard_sensor3:"🔥 எரிவாயு/புகை – MQ சென்சார்கள்", ard_sensor4:"🚪 கதவு நிலை – காந்த சென்சார்",
-            ard_arch_head:"3. 🔁 System Architecture", ard_arch_diagram:"Android App → ↓ (WiFi/Bluetooth) → Communication Module → ↓ → Arduino/ESP Board → ↓ → Relays & Sensors → ↓ → Devices + Data Feedback", ard_arch_note:"👉 இருதிசை அமைப்பு: கட்டுப்பாடு (ஆப் → Arduino) + கண்காணிப்பு (Arduino → ஆப்)",
-            ard_mod_head:"4. 🎛️ Core Functional Modules", ard_mod1_title:"4.1 🔘 Device Control Module", ard_mod1_text:"கட்டளை எடுத்துக்காட்டு: LIGHT_ON, LIGHT_OFF, FAN_ON → Arduino படிக்கிறது → digitalWrite HIGH/LOW", ard_mod2_title:"4.2 📡 Communication Handling Module", ard_mod3_title:"4.3 📊 Sensor Monitoring Module", ard_mod4_title:"4.4 🚨 Alert System", ard_mod4_text:"தூண்டுதல்: இயக்கம்/எரிவாயு/கதவு திறப்பு → பஸர் ஆன், ஆப் அறிவிப்பு, தானியங்கி பதிவு", ard_mod5_title:"4.5 🔐 Security Logic", ard_mod5_text:"அங்கீகரிக்கப்பட்ட கட்டளைகள் மட்டும், OTP உள்நுழைவு, விருப்ப கட்டளை குறியாக்கம்",
-            ard_auto_head:"5. 🔄 Automation Features", ard_auto_sched:"⏰ திட்டமிடப்பட்ட பணிகள்: மாலை 6 மணிக்கு விளக்கு ஆன், இரவு 10 மணிக்கு விசிறி ஆஃப்", ard_auto_smart:"🤖 ஸ்மார்ட் ஆட்டோமேஷன்: இயக்கம் → விளக்கு ஆன், இயக்கம் இல்லை → விளக்கு ஆஃப்", ard_power_title:"6. 🔋 Power Management", ard_power_text:"5V மின்சாரம் (Arduino), 12V (ரிலே சாதனங்கள்) + மின்னழுத்த சீராக்கிகள் + சரியான கிரவுண்டிங்", ard_cctv_title:"7. 📹 CCTV Integration (Optional)", ard_cctv_text:"ESP32-CAM தொகுதி: Arduino தூண்டுகிறது → இயக்கம் → கேமரா பதிவு", ard_future_title:"9. 🛠️ Future Improvements", ard_future_text:"🌐 கிளவுட் ஒத்திசைவு (Firebase) | 🎙️ குரல் கட்டுப்பாடு | 🤖 AI முக அங்கீகாரம் | 🔋 பேட்டரி காப்புப்பிரதி", ard_summary_title:"10. 🧩 Summary", ard_summary_text:"VisionGuard Arduino அமைப்பு: ✔ சாதன கட்டுப்பாடு ✔ சென்சார் கண்காணிப்பு ✔ நிகழ்நேர தொடர்பு ✔ பாதுகாப்பு ஆட்டோமேஷன் 👉 'ஆப்பின் மூளை → Arduino இன் கைகள்'",
-            ard_work_head:"8. 🧾 Sample Full Workflows", ard_work1_title:"Scenario 1: Motion Detection", ard_w1_1:"PIR சென்சார் இயக்கத்தை கண்டறிகிறது", ard_w1_2:"Arduino HIGH சமிக்ஞையைப் படிக்கிறது", ard_w1_3:"பஸர் ஆன்", ard_w1_4:"விளக்கு ஆன்", ard_w1_5:"ஆப் அறிவிப்பு அனுப்புகிறது", ard_work2_title:"Scenario 2: Remote Light Control", ard_w2_1:"பயனர் 'Light ON' என்பதைக் கிளிக் செய்கிறார்", ard_w2_2:"ஆப் கட்டளையை அனுப்புகிறது", ard_w2_3:"Arduino பெறுகிறது", ard_w2_4:"ரிலே ஆன்", ard_w2_5:"விளக்கு இயங்குகிறது",
-            modal_home:"முகப்பு", modal_ir:"IR ரிமோட்", modal_sensors:"சென்சார் தரவு", modal_details_title:"ஆப் விவரங்கள்", modal_detail1:"✅ Universal IR Remote (TV, AC, Fan, Set-top box)", modal_detail2:"✅ நிகழ்நேர சென்சார் கண்காணிப்பு (இயக்கம், வெப்பம், எரிவாயு)", modal_detail3:"✅ சாதன கட்டுப்பாடு (விளக்குகள், விசிறிகள், வாயில், அலாரம்)", modal_detail4:"✅ ஆட்டோமேஷன் விதிகள் + கால அட்டவணை", modal_detail5:"✅ பாதுகாப்பான அங்கீகாரம் + OTP", modal_detail6:"பதிப்பு 2.0 | அளவு: 22MB", modal_developer:"உருவாக்குனர்:", modal_email:"மின்னஞ்சல்:", modal_phone:"தொலைபேசி:"
-        }
-    };
-    
-    function setLanguage(lang) {
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.getAttribute('data-i18n');
-            if(translations[lang] && translations[lang][key] !== undefined) {
-                if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.placeholder = translations[lang][key];
-                else if(el.tagName === 'DIV' && key.includes('text')) el.innerHTML = translations[lang][key];
-                else el.innerText = translations[lang][key];
-            }
-        });
-    }
-    document.getElementById('languageSwitcher').addEventListener('change', (e) => setLanguage(e.target.value));
-    setLanguage('si');
-    
-    const modal = document.getElementById('appModal'); const demoBtn = document.getElementById('demoAppBtn'); const closeBtn = document.querySelector('.close-modal');
-    demoBtn.onclick = () => modal.style.display = 'flex';
-    closeBtn.onclick = () => modal.style.display = 'none';
-    window.onclick = (e) => { if(e.target === modal) modal.style.display = 'none'; };
-</script>
-</body>
-                                                                                                         </html>
+</html>
