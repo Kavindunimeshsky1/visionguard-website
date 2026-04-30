@@ -6,104 +6,461 @@
     <title>VisionGuard | Smart TV Protection + Arduino + IR System</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDiqDfyEigWCnH3kbQ3qoHMEO6mUn1Ba74",
+            authDomain: "email-3e3f1.firebaseapp.com",
+            projectId: "email-3e3f1",
+            storageBucket: "email-3e3f1.firebasestorage.app",
+            messagingSenderId: "810220443461",
+            appId: "1:810220443461:web:e773a75b9744cbbfb6102c",
+            measurementId: "G-CXXQCLRVGS"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        // Make auth available globally
+        window.auth = auth;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.sendPasswordResetEmail = sendPasswordResetEmail;
+        window.signOut = signOut;
+        window.onAuthStateChanged = onAuthStateChanged;
+        
+        console.log("Firebase initialized successfully!");
+    </script>
+    
+    <!-- Three.js for 3D Background -->
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.128.0/build/three.module.js" } }
     </script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #050b1a; color: #f0f4ff; overflow-x: hidden; position: relative; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #050b1a;
+            color: #f0f4ff;
+            overflow-x: hidden;
+            position: relative;
+            transition: background 0.3s, color 0.3s;
+        }
+        body.light-mode { background: #f0f4ff; color: #0f172a; }
+        body.light-mode .topic-card,
+        body.light-mode .info-box,
+        body.light-mode .component-item,
+        body.light-mode pre,
+        body.light-mode .navbar { background: rgba(220,230,250,0.9); color: #0f172a; }
+        
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; object-fit: cover; }
-        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; flex-wrap: wrap; gap: 1rem; margin: 1rem 2rem; background: rgba(10,20,35,0.65); backdrop-filter: blur(16px); border-radius: 60px; border: 1px solid rgba(59,130,246,0.4); z-index: 10; position: relative; }
+        
+        /* Login Modal */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(15px);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: 0.3s;
+        }
+        .login-card {
+            background: rgba(10,20,35,0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 2rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid #3b82f6;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+        body.light-mode .login-card { background: rgba(240,245,255,0.95); color: #0f172a; }
+        .login-card input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            margin: 0.5rem 0;
+            border-radius: 2rem;
+            border: 1px solid #3b82f6;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1rem;
+        }
+        body.light-mode .login-card input { background: white; color: black; }
+        .login-card button {
+            width: 100%;
+            padding: 0.8rem;
+            margin: 0.5rem 0;
+            border-radius: 2rem;
+            border: none;
+            background: linear-gradient(95deg, #2563eb, #1e40af);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s;
+        }
+        .login-card button:hover { transform: translateY(-2px); }
+        .login-card .secondary-btn { background: transparent; border: 1px solid #3b82f6; }
+        .login-message { margin-top: 1rem; font-size: 0.85rem; color: #86efac; }
+        
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1rem 2rem;
+            background: rgba(10,20,35,0.65);
+            backdrop-filter: blur(16px);
+            border-radius: 60px;
+            border: 1px solid rgba(59,130,246,0.4);
+            z-index: 10;
+            position: relative;
+        }
         .logo-area { display: flex; align-items: center; gap: 0.8rem; }
         .logo-icon { background: linear-gradient(145deg, #2563eb, #1e3a8a); width: 45px; height: 45px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 800; color: white; }
-        .logo-text h1 { font-size: 1.6rem; font-weight: 800; background: linear-gradient(135deg, #fff, #60a5fa); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .logo-text p { font-size: 0.65rem; color: #94a3b8; }
-        .lang-selector { background: rgba(0,0,0,0.5); padding: 0.5rem 1rem; border-radius: 40px; border: 1px solid #3b82f6; color: white; cursor: pointer; }
+        .logo-text h1 { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, #fff, #60a5fa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: rgba(59,130,246,0.2);
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+        }
+        .user-info button { background: none; border: none; color: #3b82f6; cursor: pointer; }
+        
         .hero { max-width: 1300px; margin: 2rem auto; padding: 2rem; display: flex; flex-wrap: wrap; align-items: center; gap: 3rem; z-index: 5; position: relative; }
         .hero-left { flex: 1.2; }
-        .hero-badge { background: rgba(37,99,235,0.25); width: fit-content; padding: 0.4rem 1.3rem; border-radius: 40px; font-size: 0.8rem; font-weight: 600; margin-bottom: 1.5rem; }
         .hero-left h1 { font-size: 3.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
         .highlight { background: linear-gradient(120deg, #3b82f6, #38bdf8); background-clip: text; -webkit-background-clip: text; color: transparent; }
-        .hero-left p { font-size: 1rem; color: #cbd5e6; margin-bottom: 2rem; max-width: 90%; }
-        .btn-primary { background: linear-gradient(95deg, #2563eb, #1e40af); color: white; padding: 0.75rem 1.8rem; border-radius: 50px; font-weight: 600; display: inline-block; border: none; cursor: pointer; }
-        .btn-outline-light { background: transparent; border: 1px solid #94a3b8; color: #e2e8f0; padding: 0.75rem 1.8rem; border-radius: 50px; cursor: pointer; }
-        .hero-right { flex: 0.9; background: rgba(15,30,60,0.45); backdrop-filter: blur(14px); border-radius: 2rem; padding: 1.5rem; text-align: center; }
-        .tv-shield { font-size: 5rem; }
+        .btn-primary { background: linear-gradient(95deg, #2563eb, #1e40af); color: white; padding: 0.75rem 1.8rem; border-radius: 50px; border: none; cursor: pointer; font-weight: 600; }
+        
         .section-container { max-width: 1300px; margin: 2rem auto; padding: 1rem 2rem; }
         .section-title { font-size: 2rem; text-align: center; margin-bottom: 0.5rem; }
-        .section-sub { text-align: center; color: #94a3b8; margin-bottom: 2rem; }
         .cards-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; margin-bottom: 2rem; }
-        .topic-card { background: rgba(20,30,55,0.7); backdrop-filter: blur(12px); padding: 1.2rem 1rem; border-radius: 1.5rem; flex: 1; min-width: 160px; text-align: center; cursor: pointer; transition: 0.2s; border: 1px solid rgba(59,130,246,0.4); }
+        .topic-card {
+            background: rgba(20,30,55,0.7);
+            backdrop-filter: blur(12px);
+            padding: 1.2rem 1rem;
+            border-radius: 1.5rem;
+            flex: 1;
+            min-width: 160px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid rgba(59,130,246,0.4);
+        }
         .topic-card:hover { transform: translateY(-5px); background: rgba(30,50,80,0.8); border-color: #3b82f6; }
         .topic-card i { font-size: 2rem; margin-bottom: 0.5rem; display: block; }
         .accordion-content { display: none; margin-top: 1rem; margin-bottom: 2rem; }
         .accordion-content.active { display: block; }
         .info-box { background: rgba(10,20,35,0.6); border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1.5rem; border-left: 4px solid #3b82f6; }
-        .info-box h3 { margin-bottom: 0.8rem; color: #60a5fa; }
-        .info-box h4 { margin: 1rem 0 0.5rem 0; color: #93c5fd; }
-        .component-list, .feature-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 0.8rem; margin: 1rem 0; }
-        .component-item, .feature-item { background: #0f172a; padding: 0.7rem 1rem; border-radius: 1rem; border-left: 3px solid #3b82f6; }
-        pre { background: #0f172a; padding: 1rem; border-radius: 1rem; overflow-x: auto; font-family: monospace; font-size: 0.85rem; margin: 1rem 0; border: 1px solid #334155; }
-        code { color: #86efac; }
-        .workflow-steps { background: #0f172a; padding: 1rem; border-radius: 1rem; margin: 1rem 0; list-style-position: inside; }
-        .workflow-steps li { margin-left: 1rem; padding: 0.2rem 0; }
-        .footer { text-align: center; padding: 2rem; font-size: 0.8rem; color: #94a3b8; }
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index:1000; justify-content: center; align-items: center; }
-        .modal-content { background: rgba(10,20,35,0.95); backdrop-filter: blur(20px); border-radius: 2rem; max-width: 900px; width: 90%; padding: 1.5rem; border: 1px solid #3b82f6; max-height: 85vh; overflow-y: auto; position: relative; }
-        .close-modal { position: absolute; top: 1rem; right: 1.5rem; font-size: 2rem; cursor: pointer; color: #94a3b8; }
-        .screenshot-grid { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin: 1rem 0; }
-        .screenshot-card { background: #0f172a; border-radius: 1rem; padding: 0.5rem; width: 160px; text-align: center; }
-        .screenshot-card img { width: 100%; border-radius: 0.8rem; height: 280px; object-fit: cover; }
-        @media (max-width: 800px) { .navbar { margin: 0.5rem 1rem; flex-direction: column; } .hero-left h1 { font-size: 2rem; } .section-container { padding: 0 1rem; } }
+        .component-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 0.8rem; margin: 1rem 0; }
+        .component-item { background: #0f172a; padding: 0.7rem 1rem; border-radius: 1rem; border-left: 3px solid #3b82f6; }
+        pre { background: #0f172a; padding: 1rem; border-radius: 1rem; overflow-x: auto; font-family: monospace; font-size: 0.85rem; margin: 1rem 0; position: relative; }
+        .copy-btn { position: absolute; top: 5px; right: 5px; background: #3b82f6; border: none; color: white; padding: 4px 8px; border-radius: 8px; cursor: pointer; font-size: 11px; }
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #3b82f6;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+        .back-to-top.show { opacity: 1; }
+        footer { text-align: center; padding: 2rem; font-size: 0.8rem; color: #94a3b8; }
+        
+        @media (max-width: 800px) {
+            .navbar { margin: 0.5rem 1rem; flex-direction: column; }
+            .hero-left h1 { font-size: 2rem; }
+            .section-container { padding: 0 1rem; }
+        }
     </style>
 </head>
 <body>
-<canvas id="bg-canvas"></canvas>
-<div class="navbar">
-    <div class="logo-area"><div class="logo-icon">VG</div><div class="logo-text"><h1>VisionGuard</h1><p data-i18n="tagline">SMART TV PROTECTION</p></div></div>
-    <select id="languageSwitcher" class="lang-selector"><option value="si">🇱🇰 සිංහල</option><option value="en">🇬🇧 English</option><option value="ta">🇱🇰 தமிழ்</option></select>
-</div>
-<section class="hero">
-    <div class="hero-left"><div class="hero-badge"><i class="fas fa-shield-alt"></i> <span data-i18n="badge">විශ්වාසයෙන් ආරක්ෂා කරමු</span></div>
-        <h1><span data-i18n="hero_title1">ඔබේ Smart TV එක</span><br><span class="highlight" data-i18n="hero_title2">VisionGuard</span> <span data-i18n="hero_title3">සුරක්ෂිත කරයි</span></h1>
-        <p data-i18n="hero_desc">අනවසර ප්‍රවේශය, දුර්වලතා සහ ඩිජිටල් තර්ජන වලින් ඔබේ රූපවාහිනිය ආරක්ෂා කරන්න. යාවත්කාලීන AI ආරක්ෂක පලිහ.</p>
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap;"><a href="#" class="btn-primary"><i class="fas fa-download"></i> <span data-i18n="btn_download">දැන්ම ලබාගන්න</span></a><a href="#" class="btn-outline-light"><i class="fas fa-play"></i> <span data-i18n="btn_video">ආරක්ෂණ වීඩියෝව</span></a><button id="demoAppBtn" class="btn-outline-light" style="border-color:#3b82f6;"><i class="fas fa-mobile-alt"></i> <span data-i18n="btn_demo">Preview App UI</span></button></div>
+
+<!-- Login Overlay -->
+<div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+        <i class="fas fa-shield-alt" style="font-size: 3rem; color: #3b82f6; margin-bottom: 1rem;"></i>
+        <h2 style="margin-bottom: 0.5rem;">VisionGuard</h2>
+        <p style="margin-bottom: 1.5rem; color: #94a3b8;">Sign in to access full features</p>
+        <input type="email" id="loginEmail" placeholder="Email address">
+        <input type="password" id="loginPassword" placeholder="Password">
+        <button id="loginBtn"><i class="fas fa-sign-in-alt"></i> Login</button>
+        <button id="registerBtn" class="secondary-btn"><i class="fas fa-user-plus"></i> Create Account</button>
+        <button id="forgotBtn" class="secondary-btn" style="background: transparent; border: none; font-size: 0.8rem;"><i class="fas fa-key"></i> Forgot Password?</button>
+        <div id="loginMessage" class="login-message"></div>
     </div>
-    <div class="hero-right"><div class="tv-shield"><i class="fas fa-tv fa-3x"></i>    <i class="fas fa-shield-halos fa-3x"></i></div><p style="margin-top:1rem; font-weight:600;">🔒 VisionGuard Active</p><small data-i18n="realtime">සැබෑ කාලීන තිර ආරක්ෂණය</small></div>
+</div>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- Navbar -->
+<div class="navbar">
+    <div class="logo-area">
+        <div class="logo-icon">VG</div>
+        <div class="logo-text">
+            <h1>VisionGuard</h1>
+            <p>SMART TV PROTECTION</p>
+        </div>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <div id="userInfo" class="user-info" style="display: none;">
+            <i class="fas fa-user-circle"></i>
+            <span id="userEmail"></span>
+            <button id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+        <select id="languageSwitcher" style="background: rgba(0,0,0,0.5); padding: 0.4rem 0.8rem; border-radius: 40px; border: 1px solid #3b82f6; color: white;">
+            <option value="si">🇱🇰 සිංහල</option>
+            <option value="en">🇬🇧 English</option>
+            <option value="ta">🇱🇰 தமிழ்</option>
+        </select>
+        <button id="themeToggle" style="background: rgba(0,0,0,0.5); border: none; color: white; padding: 0.4rem 0.8rem; border-radius: 40px;"><i class="fas fa-moon"></i></button>
+    </div>
+</div>
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-left">
+        <h1>ඔබේ Smart TV එක<br><span class="highlight">VisionGuard</span> සුරක්ෂිත කරයි</h1>
+        <p>අනවසර ප්‍රවේශය, දුර්වලතා සහ ඩිජිටල් තර්ජන වලින් ඔබේ රූපවාහිනිය ආරක්ෂා කරන්න. යාවත්කාලීන AI ආරක්ෂක පලිහ.</p>
+        <button class="btn-primary"><i class="fas fa-download"></i> Download Now</button>
+    </div>
+    <div class="hero-right" style="flex:0.9; text-align:center;">
+        <i class="fas fa-shield-alt fa-5x" style="color:#3b82f6;"></i>
+        <p>🔒 VisionGuard Active</p>
+    </div>
 </section>
 
-<!-- ==================== UNIVERSAL IR REMOTE SYSTEM ==================== -->
+<!-- IR System Section -->
 <div class="section-container">
-    <h2 class="section-title"><i class="fas fa-infrared"></i> <span data-i18n="ir_title">Universal IR Remote System</span></h2>
-    <p class="section-sub" data-i18n="ir_sub">VisionGuard + IR Universal Remote System (Full Guide)</p>
+    <h2 class="section-title">Universal IR Remote System</h2>
     <div class="cards-grid">
-        <div class="topic-card" onclick="toggleAccordion('ir-overview')"><i class="fas fa-globe"></i><h3 data-i18n="ir_ov_title">1. System Overview</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ir-components')"><i class="fas fa-microchip"></i><h3 data-i18n="ir_comp_title">2. Components</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ir-capture')"><i class="fas fa-code"></i><h3 data-i18n="ir_cap_title">3. Capture Codes</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ir-send')"><i class="fas fa-paper-plane"></i><h3 data-i18n="ir_send_title">4. Send Signals</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ir-database')"><i class="fas fa-database"></i><h3 data-i18n="ir_db_title">5. Code Library</h3></div>
-        <div class="topic-card" onclick="toggleAccordion('ir-app')"><i class="fas fa-mobile-alt"></i><h3 data-i18n="ir_app_title">6. App Integration</h3></div>
+        <div class="topic-card" onclick="toggleAccordion('ir-overview')"><i class="fas fa-globe"></i><h3>1. System Overview</h3></div>
+        <div class="topic-card" onclick="toggleAccordion('ir-components')"><i class="fas fa-microchip"></i><h3>2. Components</h3></div>
+        <div class="topic-card" onclick="toggleAccordion('ir-capture')"><i class="fas fa-code"></i><h3>3. Capture Codes</h3></div>
+        <div class="topic-card" onclick="toggleAccordion('ir-send')"><i class="fas fa-paper-plane"></i><h3>4. Send Signals</h3></div>
     </div>
-    <div id="ir-overview" class="accordion-content"><div class="info-box"><h3><i class="fas fa-info-circle"></i> <span data-i18n="ir_ov_head">🔰 IR System Overview</span></h3><div data-i18n="ir_ov_text"></div></div></div>
-    <div id="ir-components" class="accordion-content"><div class="info-box"><h3><i class="fas fa-microchip"></i> <span data-i18n="ir_comp_head">🧩 Required Components</span></h3><div class="component-list"><div class="component-item" data-i18n="ir_comp1">🔴 IR LED Transmitter Module – signal send කරන්න</div><div class="component-item" data-i18n="ir_comp2">📡 IR Receiver Module VS1838B – remote codes capture කරන්න</div><div class="component-item" data-i18n="ir_comp3">🎮 ESP32 Dev Board / Arduino board</div><div class="component-item" data-i18n="ir_comp4">🔧 Resistor (220Ω) + Breadboard + jumper wires (Optional)</div></div></div></div>
-    <div id="ir-capture" class="accordion-content"><div class="info-box"><h3><i class="fas fa-code"></i> <span data-i18n="ir_cap_head">🔍 Step 1 – IR Codes Capture කිරීම</span></h3><p data-i18n="ir_cap_circuit"><strong>Circuit:</strong> IR Receiver → Arduino | VCC → 5V | GND → GND | OUT → Digital pin (e.g., D15)</p><pre><code>#include &lt;IRremote.h&gt;
+    <div id="ir-overview" class="accordion-content"><div class="info-box"><h3>🔰 IR System Overview</h3><p>IR (Infrared) system is used to control TV, AC, Fan, Set-top box devices. When added to VisionGuard: 📱 App can simulate IR remote. 📡 Arduino sends IR signals to control devices. 👉 Basically: Phone = Universal Remote</p></div></div>
+    <div id="ir-components" class="accordion-content"><div class="info-box"><h3>🧩 Required Components</h3><div class="component-list"><div class="component-item">🔴 IR LED Transmitter Module</div><div class="component-item">📡 IR Receiver Module VS1838B</div><div class="component-item">🎮 ESP32 Dev Board / Arduino</div><div class="component-item">🔧 Resistor + Breadboard + Wires</div></div></div></div>
+    <div id="ir-capture" class="accordion-content"><div class="info-box"><h3>🔍 Step 1 – Capture IR Codes</h3><pre><code id="code1">#include &lt;IRremote.h&gt;
 int recvPin = 15;
 IRrecv irrecv(recvPin);
 decode_results results;
 void setup() { Serial.begin(9600); irrecv.enableIRIn(); }
-void loop() { if (irrecv.decode(&results)) { Serial.println(results.value, HEX); irrecv.resume(); } }</code></pre><p data-i18n="ir_cap_note">👉 Serial Monitor එකේ codes display වෙනවා. ඔයාගේ remote එකේ all buttons codes save කරන්න. Example: Power button → 0xFFA25D, Volume Up → 0xFF629D</p></div></div>
-    <div id="ir-send" class="accordion-content"><div class="info-box"><h3><i class="fas fa-paper-plane"></i> <span data-i18n="ir_send_head">📤 Step 2 – IR Signal Send කිරීම</span></h3><p data-i18n="ir_send_circuit"><strong>Circuit:</strong> IR LED → Arduino | Signal → Pin (e.g., D4) | GND → GND</p><pre><code>#include &lt;IRremote.h&gt;
+void loop() { if (irrecv.decode(&results)) { Serial.println(results.value, HEX); irrecv.resume(); } }</code><button class="copy-btn" onclick="copyCode('code1')">Copy</button></pre><p>👉 Serial Monitor displays codes. Example: Power → 0xFFA25D</p></div></div>
+    <div id="ir-send" class="accordion-content"><div class="info-box"><h3>📤 Step 2 – Send IR Signals</h3><pre><code id="code2">#include &lt;IRremote.h&gt;
 IRsend irsend;
-void setup() {}
-void loop() { irsend.sendNEC(0xFFA25D, 32); delay(5000); }</code></pre><p data-i18n="ir_send_note">👉 මේකෙන් device ON/OFF වෙයි</p></div></div>
-    <div id="ir-database" class="accordion-content"><div class="info-box"><h3><i class="fas fa-database"></i> <span data-i18n="ir_db_head">🎛️ IR Command Database (Important)</span></h3><p data-i18n="ir_db_text">ඔයාට build කරන්න තියෙන්නේ: 👉 Device-wise IR Code Library</p><pre><code>struct IRCommand { String name; unsigned long code; };
-IRCommand tvCommands[] = { {"POWER", 0xFFA25D}, {"VOL_UP", 0xFF629D}, {"VOL_DOWN", 0xFFE21D}, {"CH_UP", 0xFF18E7} };</code></pre><p data-i18n="ir_db_note">👉 මේක app එකෙන් control කරන්න easy වෙනවා</p></div></div>
-    <div id="ir-app" class="accordion-content"><div class="info-box"><h3><i class="fas fa-mobile-alt"></i> <span data-i18n="ir_app_head">📱 App Integration (VisionGuard)</span></h3><p data-i18n="ir_app_flow"><strong>Flow:</strong> User presses "TV Power" → App sends command "TV_POWER" → Arduino receives → IR signal send</p><pre><code>if(command == "TV_POWER"){ irsend.sendNEC(0xFFA25D, 32); }</code></pre><h4 data-i18n="ir_arch_title">🔄 Combined System (Full Architecture)</h4><pre data-i18n="ir_arch_diagram">📱 Android App → ↓ WiFi/Bluetooth → 📡 ESP32/Arduino → ↓ → 🎛️ Relays + IR Transmitter → ↓ → 💡 Devices + 📺 IR Devices</pre><p data-i18n="ir_arch_note">👉 එක system එකෙන්: Lights control ✔ Fan control ✔ TV / AC control ✔</p><h4 data-i18n="ir_auto_title">🤖 Smart Automation with IR</h4><pre><code>if(motionDetected){ irsend.sendNEC(TV_POWER, 32); }</code></pre><p data-i18n="ir_auto_note">🌡️ Temperature High → AC ON 👉 Fully smart home system 🔥</p><h4 data-i18n="ir_adv_title">📦 Advanced IR Features</h4><div class="component-list"><div class="component-item" data-i18n="ir_adv1">🔹 Multi-Device Support: TV, AC, Fan, DVD (Each device → separate code set)</div><div class="component-item" data-i18n="ir_adv2">🔹 AC Remote (Special Case): Complex signals (long codes) → Use library: IRremoteESP8266 (ESP32 සඳහා best)</div></div><h4 data-i18n="ir_issues_title">⚠️ Common Issues & Fixes</h4><ul><li data-i18n="ir_issue1">❌ IR not working → Check LED direction, Add resistor</li><li data-i18n="ir_issue2">❌ Weak signal → Use transistor amplifier</li><li data-i18n="ir_issue3">❌ Wrong code → Re-capture correctly</li></ul><h4 data-i18n="ir_power_title">🔋 Power + Stability</h4><p data-i18n="ir_power_text">Use external 5V supply, Avoid direct high load</p><h4 data-i18n="ir_workflow_title">🧪 Full Example Workflow - Scenario: TV Control</h4><ol class="workflow-steps"><li data-i18n="ir_wf1">User opens app</li><li data-i18n="ir_wf2">Clicks "Power"</li><li data-i18n="ir_wf3">App sends "TV_POWER"</li><li data-i18n="ir_wf4">ESP32 receives</li><li data-i18n="ir_wf5">IR LED sends signal</li><li data-i18n="ir_wf6">TV ON/OFF</li></ol><h4 data-i18n="ir_summary_title">🧠 Final System Summary</h4><p data-i18n="ir_summary_text">VisionGuard + IR system: ✔ Remote appliances control ✔ IR devices control ✔ Automation support ✔ Mobile-based universal remote 👉 Basically: "One App → Control Everything (Electrical + Remote Devices)"</p><h4 data-i18n="ir_bonus_title">🔥 Bonus (Important Tip)</h4><p data-i18n="ir_bonus_text">👉 Best setup: ESP32 + WiFi, IR transmitter + receiver, Relay module 👉 Result: Complete Smart Home + Universal Remote System</p></div></div>
+void loop() { irsend.sendNEC(0xFFA25D, 32); delay(5000); }</code><button class="copy-btn" onclick="copyCode('code2')">Copy</button></pre><p>👉 This turns device ON/OFF</p></div></div>
 </div>
 
-<!-- ==================== EYE SAFETY SENSOR SYSTEM ==================== -->
+<!-- Arduino System Section -->
 <div class="section-container">
-    <h2 class="section-title"><i class="fas fa-microchip"></i> <span data-i18n="ard_title">Eye Safety Sensor System</span></h2>
+    <h2 class="section-title">Eye Safety Sensor System</h2>
+    <div class="cards-grid">
+        <div class="topic-card" onclick="toggleAccordion('ard-overview')"><i class="fas fa-robot"></i><h3>1. System Overview</h3></div>
+        <div class="topic-card" onclick="toggleAccordion('ard-components')"><i class="fas fa-microchip"></i><h3>2. Components</h3></div>
+        <div class="topic-card" onclick="toggleAccordion('ard-code')"><i class="fas fa-code"></i><h3>3. Code Example</h3></div>
+    </div>
+    <div id="ard-overview" class="accordion-content"><div class="info-box"><h3>🔰 Arduino System Overview</h3><p>VisionGuard Arduino part: 👉 Real-world devices control + sensor data collection. Android app sends commands → Arduino executes. Sensors → Arduino → App (real-time monitoring). Two-way system.</p></div></div>
+    <div id="ard-components" class="accordion-content"><div class="info-box"><h3>🧠 Main Components</h3><div class="component-list"><div class="component-item">🔷 ESP32 Dev Board (Best)</div><div class="component-item">📡 WiFi/Bluetooth/GSM</div><div class="component-item">🔌 Relays for Lights/Fans</div><div class="component-item">📊 DHT11, PIR, MQ Sensors</div></div></div></div>
+    <div id="ard-code" class="accordion-content"><div class="info-box"><h3>💻 Arduino Code</h3><pre><code id="code3">if(command == "LIGHT_ON"){ digitalWrite(relayPin, HIGH); }
+int motion = digitalRead(pirPin);
+if(motion == HIGH){ sendAlert(); }</code><button class="copy-btn" onclick="copyCode('code3')">Copy</button></pre></div></div>
+</div>
+
+<footer class="footer">
+    <p>© 2026 VisionGuard — W.K.N.Vanel Fernando | <i class="fas fa-envelope"></i> kavindusky07@gmail.com | <i class="fas fa-phone-alt"></i> +94 76 320 4765</p>
+</footer>
+
+<div class="back-to-top" id="backToTop"><i class="fas fa-arrow-up"></i></div>
+
+<!-- 3D Background Script -->
+<script type="module">
+    import * as THREE from 'three';
+    const canvas = document.getElementById('bg-canvas');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    
+    const particlesGeo = new THREE.BufferGeometry();
+    const posArray = new Float32Array(1500 * 3);
+    for(let i=0; i<1500; i++) { posArray[i*3]=(Math.random()-0.5)*100; posArray[i*3+1]=(Math.random()-0.5)*60; posArray[i*3+2]=(Math.random()-0.5)*50-30; }
+    particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    const particles = new THREE.Points(particlesGeo, new THREE.PointsMaterial({ color: 0x3b82f6, size: 0.1, transparent: true }));
+    scene.add(particles);
+    
+    const ringGeo = new THREE.TorusGeometry(2.5, 0.05, 64, 200);
+    const ring = new THREE.Mesh(ringGeo, new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x1e3a8a, emissiveIntensity: 0.8 }));
+    scene.add(ring);
+    
+    scene.add(new THREE.AmbientLight(0x111122));
+    const light = new THREE.PointLight(0x3b82f6, 1);
+    light.position.set(2,3,4);
+    scene.add(light);
+    
+    camera.position.z = 12;
+    let time = 0;
+    function animate() {
+        requestAnimationFrame(animate);
+        time += 0.008;
+        particles.rotation.y = time * 0.05;
+        ring.rotation.x = Math.sin(time * 0.5) * 0.2;
+        ring.rotation.y = time * 0.2;
+        renderer.render(scene, camera);
+    }
+    animate();
+    window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+</script>
+
+<script>
+    // Utility Functions
+    function toggleAccordion(id) {
+        const el = document.getElementById(id);
+        if(el.classList.contains('active')) el.classList.remove('active');
+        else { document.querySelectorAll('.accordion-content').forEach(e => e.classList.remove('active')); el.classList.add('active'); }
+    }
+    
+    function copyCode(id) {
+        const code = document.getElementById(id).innerText;
+        navigator.clipboard.writeText(code);
+        alert('Code copied to clipboard!');
+    }
+    
+    // Back to Top
+    const backBtn = document.getElementById('backToTop');
+    window.addEventListener('scroll', () => backBtn.classList.toggle('show', window.scrollY > 300));
+    backBtn.onclick = () => window.scrollTo({top: 0, behavior: 'smooth'});
+    
+    // Theme Toggle
+    const themeBtn = document.getElementById('themeToggle');
+    themeBtn.onclick = () => document.body.classList.toggle('light-mode');
+    
+    // Language Switcher (Basic)
+    const langSelect = document.getElementById('languageSwitcher');
+    langSelect.onchange = (e) => { console.log('Language changed to:', e.target.value); };
+    
+    // ========== FIREBASE AUTHENTICATION ==========
+    const loginOverlay = document.getElementById('loginOverlay');
+    const userInfoDiv = document.getElementById('userInfo');
+    const userEmailSpan = document.getElementById('userEmail');
+    const loginMessage = document.getElementById('loginMessage');
+    
+    // Wait for Firebase to be ready
+    setTimeout(() => {
+        if(window.auth && window.onAuthStateChanged) {
+            window.onAuthStateChanged(window.auth, (user) => {
+                if(user) {
+                    // User is logged in
+                    loginOverlay.style.display = 'none';
+                    userInfoDiv.style.display = 'flex';
+                    userEmailSpan.innerText = user.email;
+                    console.log('User logged in:', user.email);
+                } else {
+                    // User is logged out
+                    loginOverlay.style.display = 'flex';
+                    userInfoDiv.style.display = 'none';
+                }
+            });
+        } else {
+            console.log('Firebase not loaded yet, retrying...');
+            setTimeout(arguments.callee, 500);
+        }
+    }, 500);
+    
+    // Login Button
+    document.getElementById('loginBtn').onclick = async () => {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        if(!email || !password) {
+            loginMessage.innerText = 'Please enter email and password';
+            return;
+        }
+        loginMessage.innerText = 'Logging in...';
+        try {
+            await window.signInWithEmailAndPassword(window.auth, email, password);
+            loginMessage.innerText = 'Login successful!';
+        } catch(error) {
+            loginMessage.innerText = error.message;
+        }
+    };
+    
+    // Register Button
+    document.getElementById('registerBtn').onclick = async () => {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        if(!email || !password) {
+            loginMessage.innerText = 'Please enter email and password';
+            return;
+        }
+        if(password.length < 6) {
+            loginMessage.innerText = 'Password must be at least 6 characters';
+            return;
+        }
+        loginMessage.innerText = 'Creating account...';
+        try {
+            await window.createUserWithEmailAndPassword(window.auth, email, password);
+            loginMessage.innerText = 'Account created! You are now logged in.';
+        } catch(error) {
+            loginMessage.innerText = error.message;
+        }
+    };
+    
+    // Forgot Password
+    document.getElementById('forgotBtn').onclick = async () => {
+        const email = document.getElementById('loginEmail').value;
+        if(!email) {
+            loginMessage.innerText = 'Please enter your email address first';
+            return;
+        }
+        loginMessage.innerText = 'Sending reset email...';
+        try {
+            await window.sendPasswordResetEmail(window.auth, email);
+            loginMessage.innerText = 'Password reset email sent! Check your inbox.';
+        } catch(error) {
+            loginMessage.innerText = error.message;
+        }
+    };
+    
+    // Logout Button
+    document.getElementById('logoutBtn').onclick = async () => {
+        await window.signOut(window.auth);
+        console.log('User logged out');
+    };
+    
+    // Make functions global
+    window.toggleAccordion = toggleAccordion;
+    window.copyCode = copyCode;
+</script>
+</body>
+</html>    <h2 class="section-title"><i class="fas fa-microchip"></i> <span data-i18n="ard_title">Eye Safety Sensor System</span></h2>
     <p class="section-sub" data-i18n="ard_sub">VisionGuard Arduino System – Full Detailed Guide</p>
     <div class="cards-grid">
         <div class="topic-card" onclick="toggleAccordion('ard-overview')"><i class="fas fa-robot"></i><h3 data-i18n="ard_ov_title">1. System Overview</h3></div>
