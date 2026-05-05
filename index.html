@@ -19,6 +19,9 @@
         }
     </script>
     
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -47,6 +50,106 @@
             color: var(--dark);
         }
         
+        /* ========== LOADING SCREEN ========== */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f172a, #1e1b4b);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        .loading-screen.hide {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .loading-logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: loadingPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes loadingPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        .loading-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .progress-bar-container {
+            width: 250px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #2563eb, #8b5cf6);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        /* ========== TOAST NOTIFICATIONS ========== */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(15, 25, 45, 0.95);
+            backdrop-filter: blur(12px);
+            padding: 14px 24px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1100;
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(59,130,246,0.4);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.success { border-left: 3px solid #22c55e; }
+        .toast.error { border-left: 3px solid #ef4444; }
+        .toast.info { border-left: 3px solid #3b82f6; }
+        
+        /* ========== TYPEWRITER EFFECT ========== */
+        .typewriter-text {
+            display: inline-block;
+            overflow: hidden;
+            border-right: 2px solid #3b82f6;
+            white-space: nowrap;
+            animation: blinkCursor 0.75s step-end infinite;
+        }
+        @keyframes blinkCursor {
+            from, to { border-color: transparent; }
+            50% { border-color: #3b82f6; }
+        }
+        
+        /* ========== ANIMATED LOGO (PULSE) ========== */
+        .animated-logo {
+            animation: logoGlow 2s ease-in-out infinite;
+        }
+        @keyframes logoGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
+        }
+        
         ::-webkit-scrollbar { width: 10px; }
         ::-webkit-scrollbar-track { background: #1e293b; border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
@@ -59,13 +162,6 @@
             height: 100%; 
             z-index: -2; 
             object-fit: cover;
-        }
-        
-        /* Glassmorphism */
-        .glass {
-            background: rgba(15, 25, 45, 0.55);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(59, 130, 246, 0.3);
         }
         
         /* Login Modal */
@@ -203,7 +299,7 @@
             margin-bottom: 1rem;
             color: var(--accent);
         }
-        .hero-left h1 { font-size: 3.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+        .hero-left h1 { font-size: 3rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
         .highlight { background: linear-gradient(120deg, var(--primary), var(--secondary)); background-clip: text; -webkit-background-clip: text; color: transparent; }
         .hero-left p { font-size: 1rem; color: #94a3b8; margin-bottom: 1.5rem; line-height: 1.6; }
         .btn-group { display: flex; gap: 1rem; flex-wrap: wrap; }
@@ -249,10 +345,8 @@
             border: 1px solid rgba(59,130,246,0.3);
         }
         
-        /* Section styles */
         .section-container { max-width: 1300px; margin: 2rem auto; padding: 1rem 2rem; }
         .section-title { font-size: 1.8rem; text-align: center; margin-bottom: 0.5rem; font-weight: 700; }
-        .section-subtitle { text-align: center; color: #94a3b8; margin-bottom: 2rem; max-width: 700px; margin-left: auto; margin-right: auto; }
         
         .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
         .info-card {
@@ -407,6 +501,18 @@
 </head>
 <body>
 
+<!-- ========== LOADING SCREEN ========== -->
+<div class="loading-screen" id="loadingScreen">
+    <div class="loading-logo">🛡️</div>
+    <div class="loading-text">VisionGuard</div>
+    <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+</div>
+
+<!-- ========== TOAST NOTIFICATION CONTAINER ========== -->
+<div id="toastContainer"></div>
+
 <!-- Login Modal -->
 <div id="loginOverlay" class="login-overlay">
     <div class="login-card">
@@ -431,7 +537,7 @@
 <!-- Navbar -->
 <nav class="navbar">
     <div class="logo-area">
-        <div class="logo-icon">🛡️</div>
+        <div class="logo-icon animated-logo">🛡️</div>
         <div class="logo-text">
             <h1>VisionGuard</h1>
             <p data-i18n="tagline">PROFESSIONAL SECURITY</p>
@@ -449,7 +555,7 @@
             <option value="ta">🇱🇰 தமிழ்</option>
         </select>
         <button id="themeToggle" class="nav-btn"><i class="fas fa-moon"></i></button>
-        <button class="nav-btn" onclick="window.print()"><i class="fas fa-print"></i> <span data-i18n="report_btn">Report</span></button>
+        <button class="nav-btn" id="printPdfBtn"><i class="fas fa-print"></i> <span data-i18n="report_btn">Report</span></button>
     </div>
 </nav>
 
@@ -459,7 +565,7 @@
         <div class="hero-badge" data-i18n="badge">
             <i class="fas fa-shield-alt"></i> Advanced Protection
         </div>
-        <h1><span data-i18n="hero_line1">VisionGuard:</span><br><span class="highlight" data-i18n="hero_line2">Smart TV Protection</span><br><span data-i18n="hero_line3">& Complete Home Automation</span></h1>
+        <h1 id="heroTitle">VisionGuard: <span class="highlight">Smart TV Protection</span> & Complete Home Automation</h1>
         <p data-i18n="hero_desc">An AI-powered IoT security system that combines Smart TV threat detection, universal IR remote control, and Arduino-based sensor automation for total peace of mind.</p>
         <div class="btn-group">
             <button class="btn-primary"><i class="fas fa-download"></i> <span data-i18n="download_app">Download App</span></button>
@@ -478,7 +584,7 @@
     </div>
 </section>
 
-<!-- Problem & Solution -->
+<!-- Rest of the sections remain the same... -->
 <div class="section-container">
     <h2 class="section-title" data-i18n="problem_title">The Challenge</h2>
     <div class="info-grid">
@@ -526,26 +632,20 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         VISIONGUARD SYSTEM ARCHITECTURE                      │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
 │  ┌──────────────┐      ┌──────────────┐      ┌──────────────────────────┐  │
 │  │  Mobile App  │      │   Firebase   │      │     EmailJS Service      │  │
 │  │  (Frontend)  │◄────►│    (Cloud)   │◄────►│     (OTP Auth)           │  │
 │  └──────┬───────┘      └──────────────┘      └──────────────────────────┘  │
-│         │                                                                   │
 │         │ WiFi/Bluetooth                                                    │
 │         ▼                                                                   │
 │  ┌──────────────┐      ┌──────────────┐      ┌──────────────────────────┐  │
 │  │  ESP32/Ardu  │──────│  IR LED/Rx   │──────│  TV / AC / Fan / Devices │  │
-│  │   (Hardware) │      │  (IR Module) │      │     (IR Controllable)    │  │
 │  └──────┬───────┘      └──────────────┘      └──────────────────────────┘  │
-│         │                                                                   │
 │         │ Sensors                                                           │
 │         ▼                                                                   │
-│  ┌──────────────┐      ┌──────────────┐      ┌──────────────────────────┐  │
-│  │  DHT11 Temp  │      │  PIR Motion  │      │  MQ-135 Gas/Smoke        │  │
-│  └──────────────┘      └──────────────┘      └──────────────────────────┘  │
-│                                                                              │
-│  DATA FLOW: Sensors → Arduino → App (Monitor) , App → Arduino → Relays/IR   │
+│  ┌──────────────┐      ┌──────────────┐                                    │
+│  │  DHT11 Temp  │      │  PIR Motion  │                                    │
+│  └──────────────┘      └──────────────┘                                    │
 └─────────────────────────────────────────────────────────────────────────────┘
         </pre>
     </div>
@@ -660,7 +760,7 @@ void loop() {
 
 <div class="back-to-top" id="backToTop"><i class="fas fa-arrow-up"></i></div>
 
-<!-- 3D Live Background Script (with Shooting Stars) -->
+<!-- 3D Live Background & Shooting Stars Script -->
 <script type="module">
     import * as THREE from 'three';
     const canvas = document.getElementById('bg-canvas');
@@ -742,32 +842,22 @@ void loop() {
     const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
     scene.add(ring2);
     
-    // ========== NEW SHOOTING STARS SYSTEM ==========
+    // Shooting Stars
     const shootingStarCount = 300;
     const shootingStars = [];
-    
-    // Create shooting stars as small line segments
     for (let i = 0; i < shootingStarCount; i++) {
-        // Random start position on screen edges
         const startX = (Math.random() - 0.5) * 50;
         const startY = (Math.random() - 0.5) * 30 + 5;
         const startZ = (Math.random() - 0.5) * 40 - 20;
-        
-        // Random direction vector
         const dirX = -0.5 + Math.random() * 0.3;
         const dirY = -0.3 + Math.random() * 0.2;
         const dirZ = -0.2 + Math.random() * 0.2;
-        
-        // Normalize direction
         const len = Math.sqrt(dirX*dirX + dirY*dirY + dirZ*dirZ);
         const normX = dirX / len;
         const normY = dirY / len;
         const normZ = dirZ / len;
-        
         const speed = 0.08 + Math.random() * 0.12;
         const length = 0.4 + Math.random() * 0.3;
-        
-        // Create a line for each shooting star
         const material = new THREE.LineBasicMaterial({ color: 0xffaa66 });
         const geometry = new THREE.BufferGeometry();
         const vertices = new Float32Array([
@@ -777,43 +867,24 @@ void loop() {
         geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
         const line = new THREE.Line(geometry, material);
         scene.add(line);
-        
         shootingStars.push({
             line: line,
             posX: startX, posY: startY, posZ: startZ,
             dirX: normX, dirY: normY, dirZ: normZ,
             speed: speed,
             length: length,
-            active: true,
             life: 1.0,
             fadeSpeed: 0.005 + Math.random() * 0.01
         });
     }
     
-    // Also add small glowing particles for stars background
-    const bgStarCount = 800;
-    const bgStarGeo = new THREE.BufferGeometry();
-    const bgStarPos = new Float32Array(bgStarCount * 3);
-    for (let i = 0; i < bgStarCount; i++) {
-        bgStarPos[i*3] = (Math.random() - 0.5) * 150;
-        bgStarPos[i*3+1] = (Math.random() - 0.5) * 80;
-        bgStarPos[i*3+2] = (Math.random() - 0.5) * 80 - 40;
-    }
-    bgStarGeo.setAttribute('position', new THREE.BufferAttribute(bgStarPos, 3));
-    const bgStarMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, transparent: true, opacity: 0.4 });
-    const bgStars = new THREE.Points(bgStarGeo, bgStarMat);
-    scene.add(bgStars);
-    
     let time = 0;
-    
     function animate() {
         requestAnimationFrame(animate);
         time += 0.008;
         
-        // Existing animations
         particleSystem.rotation.y = time * 0.05;
         particleSystem.rotation.x = Math.sin(time * 0.1) * 0.1;
-        
         ring.rotation.x = Math.sin(time * 0.4) * 0.2;
         ring.rotation.y = time * 0.3;
         ring2.rotation.x = Math.sin(time * 0.5) * 0.15;
@@ -832,22 +903,11 @@ void loop() {
         const scale = 1 + Math.sin(time * 5) * 0.03;
         coreSphere.scale.set(scale, scale, scale);
         
-        // Rotate background stars slowly
-        bgStars.rotation.y = time * 0.01;
-        
-        // ========== UPDATE SHOOTING STARS ==========
         shootingStars.forEach(star => {
-            if (!star.active) return;
-            
-            // Update position
             star.posX += star.dirX * star.speed;
             star.posY += star.dirY * star.speed;
             star.posZ += star.dirZ * star.speed;
-            
-            // Fade out over time
             star.life -= star.fadeSpeed;
-            
-            // Update line geometry
             const positions = star.line.geometry.attributes.position.array;
             positions[0] = star.posX;
             positions[1] = star.posY;
@@ -856,26 +916,13 @@ void loop() {
             positions[4] = star.posY + star.dirY * star.length;
             positions[5] = star.posZ + star.dirZ * star.length;
             star.line.geometry.attributes.position.needsUpdate = true;
-            
-            // Update opacity based on life
-            const opacity = Math.min(0.8, star.life * 0.8);
+            star.line.material.opacity = Math.min(0.8, star.life * 0.8);
             star.line.material.transparent = true;
-            star.line.material.opacity = opacity;
-            
-            // Reset when faded out or out of bounds
-            if (star.life <= 0.02 || 
-                Math.abs(star.posX) > 45 || 
-                Math.abs(star.posY) > 30 || 
-                Math.abs(star.posZ) > 35) {
-                
-                // Reset position on random edge
+            if (star.life <= 0.02 || Math.abs(star.posX) > 45 || Math.abs(star.posY) > 30 || Math.abs(star.posZ) > 35) {
                 star.posX = (Math.random() - 0.5) * 50;
                 star.posY = (Math.random() - 0.5) * 30 + 5;
                 star.posZ = (Math.random() - 0.5) * 40 - 20;
                 star.life = 0.7 + Math.random() * 0.3;
-                star.fadeSpeed = 0.008 + Math.random() * 0.015;
-                
-                // Random new direction
                 const newDirX = -0.6 + Math.random() * 0.4;
                 const newDirY = -0.4 + Math.random() * 0.3;
                 const newDirZ = -0.3 + Math.random() * 0.3;
@@ -885,8 +932,6 @@ void loop() {
                 star.dirZ = newDirZ / len;
                 star.speed = 0.08 + Math.random() * 0.15;
                 star.length = 0.3 + Math.random() * 0.4;
-                
-                // Reset line vertices immediately
                 const newPositions = star.line.geometry.attributes.position.array;
                 newPositions[0] = star.posX;
                 newPositions[1] = star.posY;
@@ -895,13 +940,11 @@ void loop() {
                 newPositions[4] = star.posY + star.dirY * star.length;
                 newPositions[5] = star.posZ + star.dirZ * star.length;
                 star.line.geometry.attributes.position.needsUpdate = true;
-                star.line.material.opacity = 0.7;
             }
         });
         
         camera.position.x += (0 - camera.position.x) * 0.02;
         camera.lookAt(0, 0, 0);
-        
         renderer.render(scene, camera);
     }
     animate();
@@ -914,19 +957,76 @@ void loop() {
 </script>
 
 <script>
+    // ========== LOADING SCREEN ==========
+    let progress = 0;
+    const progressBar = document.getElementById('progressBar');
+    const loadingScreen = document.getElementById('loadingScreen');
+    const interval = setInterval(() => {
+        progress += Math.random() * 10;
+        if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            setTimeout(() => {
+                loadingScreen.classList.add('hide');
+            }, 500);
+        }
+        progressBar.style.width = progress + '%';
+    }, 200);
+    
+    // ========== TOAST NOTIFICATION FUNCTION ==========
+    function showToast(message, type = 'info') {
+        const toastContainer = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+        toast.innerHTML = `<span style="font-size:1.2rem;">${icon}</span><span>${message}</span>`;
+        toastContainer.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    // ========== TYPEWRITER EFFECT ==========
+    const heroTitle = document.getElementById('heroTitle');
+    const originalText = heroTitle.innerText;
+    heroTitle.innerText = '';
+    let i = 0;
+    function typeWriter() {
+        if (i < originalText.length) {
+            heroTitle.innerHTML += originalText.charAt(i);
+            i++;
+            setTimeout(typeWriter, 50);
+        } else {
+            heroTitle.style.borderRight = 'none';
+        }
+    }
+    setTimeout(typeWriter, 500);
+    
+    // ========== CONFETTI ON LOGIN ==========
+    function triggerConfetti() {
+        canvasConfetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#2563eb', '#60a5fa', '#8b5cf6'] });
+        canvasConfetti({ particleCount: 100, spread: 100, origin: { y: 0.7, x: 0.2 }, startVelocity: 15 });
+        canvasConfetti({ particleCount: 100, spread: 100, origin: { y: 0.7, x: 0.8 }, startVelocity: 15 });
+    }
+    
+    // ========== PDF DOWNLOAD ==========
+    document.getElementById('printPdfBtn').onclick = () => {
+        window.print();
+        showToast('📄 Project report download started!', 'success');
+    };
+    
     // ========== EMAILJS CONFIGURATION ==========
     const EMAILJS_PUBLIC_KEY = "VVrl-moux64oHkuAQ";
     const EMAILJS_SERVICE_ID = "service_37tgwy4";
     const EMAILJS_TEMPLATE_ID = "template_m9i4xmx";
-    
-    // Initialize EmailJS with your new public key
     emailjs.init(EMAILJS_PUBLIC_KEY);
     
     let generatedOtp = null;
     let otpEmail = null;
     let otpExpiry = null;
     
-    // Check if user is already logged in
     let loggedInUser = localStorage.getItem('visionguard_user');
     if(loggedInUser) {
         document.getElementById('loginOverlay').style.display = 'none';
@@ -934,132 +1034,61 @@ void loop() {
         document.getElementById('userEmail').innerText = loggedInUser;
     }
     
-    // Send OTP via EmailJS
     async function sendOTPEmail(email, otp) {
         try {
-            const response = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-                to_email: email,
-                otp: otp,
-                email: email
-            });
-            console.log("Email sent successfully:", response);
+            await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: email, otp: otp, email: email });
             return true;
-        } catch(error) {
-            console.error("EmailJS Error:", error);
-            return false;
-        }
+        } catch(e) { return false; }
     }
     
-    // Send OTP Button
     document.getElementById('sendOtpBtn').onclick = async () => {
         const email = document.getElementById('loginEmail').value;
-        if(!email || !email.includes('@')) {
-            document.getElementById('loginMessage').innerText = 'Please enter a valid email address';
-            return;
-        }
-        
-        document.getElementById('loginMessage').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending OTP...';
-        
-        // Generate 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        generatedOtp = otp;
-        otpEmail = email;
-        otpExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes expiry
-        
-        console.log("Sending OTP to:", email, "OTP:", otp);
-        
-        // Send via EmailJS
+        if(!email || !email.includes('@')) { showToast('Please enter valid email', 'error'); return; }
+        showToast('📧 Sending OTP...', 'info');
+        const otp = Math.floor(100000 + Math.random()*900000).toString();
+        generatedOtp = otp; otpEmail = email; otpExpiry = Date.now() + 5*60*1000;
         const sent = await sendOTPEmail(email, otp);
-        
-        if(sent) {
-            document.getElementById('loginMessage').innerHTML = `✅ OTP sent to ${email}! Check your inbox/spam folder.`;
-        } else {
-            // Fallback: show OTP in alert for demo
-            alert(`⚠️ Email sending failed. Please check EmailJS configuration.\n\nDemo OTP for testing: ${otp}\n\nUse this code to login.`);
-            document.getElementById('loginMessage').innerHTML = `⚠️ Email failed. Demo OTP: ${otp} (check alert box)`;
-        }
-        
-        // Show OTP input field
+        if(sent) showToast(`✅ OTP sent to ${email}`, 'success');
+        else showToast(`⚠️ Demo OTP: ${otp}`, 'info');
         document.getElementById('stepEmail').style.display = 'none';
         document.getElementById('stepOtp').classList.add('show');
     };
     
-    // Verify OTP Button
     document.getElementById('verifyOtpBtn').onclick = () => {
         const enteredOtp = document.getElementById('otpCode').value;
-        
-        if(!generatedOtp) {
-            document.getElementById('loginMessage').innerText = 'Please request OTP first';
-            return;
-        }
-        
-        if(Date.now() > otpExpiry) {
-            document.getElementById('loginMessage').innerText = 'OTP has expired. Please request a new one.';
-            return;
-        }
-        
+        if(!generatedOtp) { showToast('Please request OTP first', 'error'); return; }
+        if(Date.now() > otpExpiry) { showToast('OTP expired. Request new one', 'error'); return; }
         if(enteredOtp === generatedOtp) {
-            // Login successful
             localStorage.setItem('visionguard_user', otpEmail);
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('userInfo').style.display = 'flex';
             document.getElementById('userEmail').innerText = otpEmail;
-            // Reset form
             document.getElementById('stepEmail').style.display = 'block';
             document.getElementById('stepOtp').classList.remove('show');
-            document.getElementById('otpCode').value = '';
-            document.getElementById('loginEmail').value = '';
-            document.getElementById('loginMessage').innerText = '';
-            // Show success message
-            alert('Login successful! Welcome to VisionGuard.');
-        } else {
-            document.getElementById('loginMessage').innerText = 'Invalid OTP. Please try again.';
-        }
+            showToast('🎉 Login successful! Welcome to VisionGuard', 'success');
+            triggerConfetti();
+        } else showToast('Invalid OTP', 'error');
     };
     
-    // Resend OTP Button
     document.getElementById('resendOtpBtn').onclick = async () => {
-        if(!otpEmail) {
-            document.getElementById('loginMessage').innerText = 'Email not found. Please go back.';
-            document.getElementById('stepEmail').style.display = 'block';
-            document.getElementById('stepOtp').classList.remove('show');
-            return;
-        }
-        
-        const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-        generatedOtp = newOtp;
-        otpExpiry = Date.now() + 5 * 60 * 1000;
-        
-        document.getElementById('loginMessage').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resending OTP...';
-        
+        if(!otpEmail) { showToast('Email not found', 'error'); return; }
+        const newOtp = Math.floor(100000 + Math.random()*900000).toString();
+        generatedOtp = newOtp; otpExpiry = Date.now() + 5*60*1000;
         const sent = await sendOTPEmail(otpEmail, newOtp);
-        
-        if(sent) {
-            document.getElementById('loginMessage').innerHTML = `✅ New OTP sent to ${otpEmail}!`;
-        } else {
-            alert(`⚠️ Resend failed. Demo OTP: ${newOtp}`);
-            document.getElementById('loginMessage').innerHTML = `⚠️ Demo OTP: ${newOtp}`;
-        }
+        if(sent) showToast(`✅ New OTP sent to ${otpEmail}`, 'success');
+        else showToast(`⚠️ Demo OTP: ${newOtp}`, 'info');
     };
     
-    // Logout Button
     document.getElementById('logoutBtn').onclick = () => {
         localStorage.removeItem('visionguard_user');
-        document.getElementById('loginOverlay').style.display = 'flex';
-        document.getElementById('userInfo').style.display = 'none';
-        document.getElementById('stepEmail').style.display = 'block';
-        document.getElementById('stepOtp').classList.remove('show');
-        document.getElementById('loginEmail').value = '';
-        document.getElementById('otpCode').value = '';
-        generatedOtp = null;
-        document.getElementById('loginMessage').innerText = '';
+        location.reload();
     };
     
     // Translations
     const translations = {
         en: {
             login_title: "VisionGuard", login_sub: "Secure Access", login_email_placeholder: "Email address", send_otp_btn: "Send OTP", otp_placeholder: "Enter OTP", verify_btn: "Verify & Login", resend_btn: "Resend OTP", logout: "Logout", report_btn: "Report", tagline: "PROFESSIONAL SECURITY", badge: "Advanced Protection",
-            hero_line1: "VisionGuard:", hero_line2: "Smart TV Protection", hero_line3: "& Complete Home Automation", hero_desc: "An AI-powered IoT security system that combines Smart TV threat detection, universal IR remote control, and Arduino-based sensor automation for total peace of mind.",
+            hero_desc: "An AI-powered IoT security system that combines Smart TV threat detection, universal IR remote control, and Arduino-based sensor automation for total peace of mind.",
             download_app: "Download App", watch_demo: "Watch Demo", stat_users: "Active Users", stat_devices: "Devices Protected", stat_uptime: "Uptime", system_status: "System Status", online: "Active", realtime: "Real-time Protection Enabled",
             problem_title: "The Challenge", problem_head: "Problem", problem_text: "Traditional home security systems are expensive, fragmented, and lack integration with Smart TVs.",
             solution_head: "Our Solution", solution_text: "VisionGuard unifies Smart TV protection, universal IR control, and Arduino-based environmental sensing into a single, affordable system.",
@@ -1077,7 +1106,7 @@ void loop() {
         },
         si: {
             login_title: "විශන්ගාඩ්", login_sub: "ආරක්ෂිත ප්‍රවේශය", login_email_placeholder: "විද්‍යුත් තැපෑල", send_otp_btn: "OTP එවන්න", otp_placeholder: "OTP ඇතුළත් කරන්න", verify_btn: "තහවුරු කරන්න", resend_btn: "නැවත OTP එවන්න", logout: "ඉවත් වන්න", report_btn: "වාර්තාව", tagline: "වෘත්තීය ආරක්ෂාව", badge: "උසස් ආරක්ෂාව",
-            hero_line1: "විශන්ගාඩ්:", hero_line2: "ස්මාර්ට් ටීවී ආරක්ෂාව", hero_line3: "සහ සම්පූර්ණ ගෘහ ස්වයංක්‍රීයකරණය", hero_desc: "ස්මාර්ට් ටීවී තර්ජන හඳුනාගැනීම, විශ්වීය IR දුරස්ථ පාලකය සහ Arduino පාදක සංවේදක ස්වයංක්‍රීයකරණය ඒකාබද්ධ කරන AI බලයෙන් ක්‍රියාත්මක IoT ආරක්ෂණ පද්ධතියකි.",
+            hero_desc: "ස්මාර්ට් ටීවී තර්ජන හඳුනාගැනීම, විශ්වීය IR දුරස්ථ පාලකය සහ Arduino පාදක සංවේදක ස්වයංක්‍රීයකරණය ඒකාබද්ධ කරන AI බලයෙන් ක්‍රියාත්මක IoT ආරක්ෂණ පද්ධතියකි.",
             download_app: "යෙදුම බාගන්න", watch_demo: "සාදර්ශනය නරඹන්න", stat_users: "සක්‍රීය පරිශීලකයින්", stat_devices: "ආරක්ෂිත උපාංග", stat_uptime: "ක්‍රියාකාරී කාලය", system_status: "පද්ධති තත්ත්වය", online: "සක්‍රීයයි", realtime: "තත්‍ය කාලීන ආරක්ෂාව",
             problem_title: "අභියෝගය", problem_head: "ගැටළුව", problem_text: "සාම්ප්‍රදායික ගෘහ ආරක්ෂණ පද්ධති මිල අධික, ඛණ්ඩනය වූ අතර ස්මාර්ට් ටීවී සමඟ ඒකාබද්ධ වීමක් නොමැත.",
             solution_head: "අපගේ විසඳුම", solution_text: "විශන්ගාඩ් ස්මාර්ට් ටීවී ආරක්ෂාව, විශ්වීය IR පාලනය සහ Arduino පාදක පාරිසරික සංවේදනය ඒකාබද්ධ කරයි.",
@@ -1095,7 +1124,7 @@ void loop() {
         },
         ta: {
             login_title: "விஷன்கார்ட்", login_sub: "பாதுகாப்பான அணுகல்", login_email_placeholder: "மின்னஞ்சல் முகவரி", send_otp_btn: "OTP அனுப்பு", otp_placeholder: "OTP உள்ளிடுக", verify_btn: "சரிபார் & உள்நுழைக", resend_btn: "மீண்டும் OTP அனுப்பு", logout: "வெளியேறு", report_btn: "அறிக்கை", tagline: "தொழில்முறை பாதுகாப்பு", badge: "மேம்பட்ட பாதுகாப்பு",
-            hero_line1: "விஷன்கார்ட்:", hero_line2: "ஸ்மார்ட் டிவி பாதுகாப்பு", hero_line3: "& முழு வீட்டு ஆட்டோமேஷன்", hero_desc: "ஸ்மார்ட் டிவி அச்சுறுத்தல் கண்டறிதல், உலகளாவிய IR ரிமோட் கண்ட்ரோல் மற்றும் Arduino அடிப்படையிலான சென்சார் ஆட்டோமேஷன் ஆகியவற்றை ஒருங்கிணைக்கும் AI- இயங்கும் IoT பாதுகாப்பு அமைப்பு.",
+            hero_desc: "ஸ்மார்ட் டிவி அச்சுறுத்தல் கண்டறிதல், உலகளாவிய IR ரிமோட் கண்ட்ரோல் மற்றும் Arduino அடிப்படையிலான சென்சார் ஆட்டோமேஷன் ஆகியவற்றை ஒருங்கிணைக்கும் AI- இயங்கும் IoT பாதுகாப்பு அமைப்பு.",
             download_app: "பயன்பாட்டைப் பதிவிறக்குக", watch_demo: "முன்னோட்டத்தைப் பார்", stat_users: "செயலில் உள்ள பயனர்கள்", stat_devices: "பாதுகாக்கப்பட்ட சாதனங்கள்", stat_uptime: "இயக்க நேரம்", system_status: "அமைப்பின் நிலை", online: "செயலில்", realtime: "நிகழ்நேர பாதுகாப்பு",
             problem_title: "சவால்", problem_head: "பிரச்சினை", problem_text: "பாரம்பரிய வீட்டுப் பாதுகாப்பு அமைப்புகள் விலை உயர்ந்தவை, துண்டாடப்பட்டவை மற்றும் ஸ்மார்ட் டிவிகளுடன் ஒருங்கிணைப்பு இல்லை.",
             solution_head: "எங்கள் தீர்வு", solution_text: "விஷன்கார்ட் ஸ்மார்ட் டிவி பாதுகாப்பு, உலகளாவிய IR கட்டுப்பாடு மற்றும் Arduino அடிப்படையிலான சுற்றுச்சூழல் உணர்வை ஒருங்கிணைக்கிறது.",
@@ -1130,7 +1159,6 @@ void loop() {
     document.getElementById('languageSwitcher').addEventListener('change', (e) => setLanguage(e.target.value));
     setLanguage('en');
     
-    // Accordion and other functions
     function toggleAccordion(id) {
         const el = document.getElementById(id);
         if(el.classList.contains('active')) el.classList.remove('active');
@@ -1138,19 +1166,22 @@ void loop() {
     }
     
     function copyCode(id) {
-        const code = document.getElementById(id).innerText;
-        navigator.clipboard.writeText(code);
-        alert('Code copied to clipboard!');
+        navigator.clipboard.writeText(document.getElementById(id).innerText);
+        showToast('📋 Code copied to clipboard!', 'success');
     }
     
     const backBtn = document.getElementById('backToTop');
     window.addEventListener('scroll', () => backBtn.classList.toggle('show', window.scrollY > 300));
     backBtn.onclick = () => window.scrollTo({top: 0, behavior: 'smooth'});
-    
     document.getElementById('themeToggle').onclick = () => document.body.classList.toggle('light-mode');
     
     window.toggleAccordion = toggleAccordion;
     window.copyCode = copyCode;
+    
+    // Copy button toast integration
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', function() { showToast('Code copied!', 'success'); });
+    });
 </script>
 </body>
-    </html>
+                                                                                                             </html>
